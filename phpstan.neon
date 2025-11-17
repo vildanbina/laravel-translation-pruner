@@ -1,0 +1,10 @@
+parameters:
+    level: 9
+    paths:
+        - src
+        - tests
+    excludePaths:
+        - '*/vendor/*'
+        - 'bootstrap/cache/*'
+        - 'storage/*'
+        - 'node_modules/*'
