@@ -16,27 +16,18 @@ php artisan vendor:publish --tag="translation-pruner-config"
 
 ## Usage
 
-### Scan for unused translations
-
 ```bash
-# See what's unused (dry run by default)
-php artisan translation:scan
-
-# Save results to file
-php artisan translation:scan --save=unused.json
-```
-
-### Remove unused translations
-
-```bash
-# Preview what will be deleted
-php artisan translation:prune --dry-run
-
-# Actually delete them (will ask for confirmation)
+# Delete unused translations (will ask for confirmation)
 php artisan translation:prune
 
 # Delete without asking for confirmation
 php artisan translation:prune --force
+
+# Preview what would be deleted without actually deleting
+php artisan translation:prune --dry-run
+
+# Limit scanning to specific folders
+php artisan translation:prune --path=app --path=modules/Blog
 ```
 
 ## Configuration
@@ -62,6 +53,31 @@ return [
         'filament.*',
     ],
 
+    // Directories within the scan paths to skip entirely
+    'ignore' => [
+        'vendor',
+        'node_modules',
+    ],
+
+    // File patterns to scan
+    'file_patterns' => ['*.php', '*.blade.php', '*.vue', '*.js', '*.ts', '*.jsx', '*.tsx'],
+
+    // Swap or extend the translation loaders/scanners as needed
+    'loaders' => [
+        \VildanBina\TranslationPruner\Loaders\JsonLoader::class,
+        \VildanBina\TranslationPruner\Loaders\PhpArrayLoader::class,
+    ],
+
+    'scanners' => [
+        \VildanBina\TranslationPruner\Scanners\PhpScanner::class,
+        \VildanBina\TranslationPruner\Scanners\BladeScanner::class,
+        \VildanBina\TranslationPruner\Scanners\VueScanner::class,
+        \VildanBina\TranslationPruner\Scanners\ReactScanner::class,
+    ],
+
+    // Optional custom lang path (defaults to base_path('lang'))
+    'lang_path' => base_path('lang'),
+
     // Enable debug output
     'debug' => env('APP_DEBUG', false),
 ];
@@ -84,30 +100,34 @@ The package looks for translations in:
 - `$t('messages.welcome')`
 - `i18n.t('auth.login')`
 
+**React (JSX/TSX) files:**
+- `t('messages.welcome')`
+- `<Trans i18nKey="auth.login" />`
+- `<FormattedMessage id="auth.login" />`
+
 ## Features
 
-- ✅ Scans PHP, Blade, Vue, and JavaScript files
+- ✅ Scans PHP, Blade/Livewire, Vue, and React files
 - ✅ Handles both array and JSON translation files
 - ✅ Safe dry-run mode
 - ✅ Configurable exclusion patterns
+- ✅ Extensible loaders/scanners and file globs
 - ✅ Simple and fast
 
 ## Example output
 
 ```
-Scanning for translations...
-+---------------------+-------+
-| Metric              | Count |
-+---------------------+-------+
-| Total translations  | 156   |
-| Used translations   | 98    |
-| Unused translations | 58    |
-+---------------------+-------+
+Finding unused translations...
+Found 58 unused translation entries:
+  • messages.old_welcome (en)
+  • auth.unused_button (en, de)
+  • validation.custom_field (en)
+  ...
 
-Unused translations:
-  • messages.old_welcome
-  • auth.unused_button
-  • validation.custom_field
+Delete these unused translations? (yes/no) [no]:
+> yes
+
+✅ Deleted 58 unused translation entries
 ```
 
 ## Contributing

@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace VildanBina\TranslationPruner\Scanners;
 
-class VueScanner
+use VildanBina\TranslationPruner\Contracts\ScannerInterface;
+
+class VueScanner implements ScannerInterface
 {
-    public function canHandle(string $extension): bool
+    public function canHandle(string $fileName): bool
     {
+        $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+
         return in_array($extension, ['vue', 'js', 'ts', 'jsx', 'tsx']);
     }
 

@@ -6,25 +6,25 @@ namespace VildanBina\TranslationPruner\Scanners;
 
 use VildanBina\TranslationPruner\Contracts\ScannerInterface;
 
-class PhpScanner implements ScannerInterface
+class ReactScanner implements ScannerInterface
 {
     public function canHandle(string $fileName): bool
     {
-        return pathinfo($fileName, PATHINFO_EXTENSION) === 'php'
-            && ! str_ends_with($fileName, '.blade.php');
+        $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+
+        return in_array($extension, ['js', 'jsx', 'ts', 'tsx'], true);
     }
 
     public function scan(string $content): array
     {
         $keys = [];
 
-        // Basic patterns for common Laravel translation functions
         $patterns = [
-            '/__\([\'"]([^\'"]+)[\'"]/',
-            '/trans\([\'"]([^\'"]+)[\'"]/',
-            '/Lang::get\([\'"]([^\'"]+)[\'"]/',
-            '/trans_choice\([\'"]([^\'"]+)[\'"]/',
-            '/Lang::choice\([\'"]([^\'"]+)[\'"]/',
+            '/\bt\(\s*[\'"]([^\'"]+)[\'"]/i',
+            '/i18n\.t\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/<Trans[^>]+i18nKey=[\'"]([^\'"]+)[\'"]/',
+            '/<FormattedMessage[^>]+id=[\'"]([^\'"]+)[\'"]/',
+            '/t\(\s*\`([^`]+)\`/',
         ];
 
         foreach ($patterns as $pattern) {
@@ -33,6 +33,6 @@ class PhpScanner implements ScannerInterface
             }
         }
 
-        return array_unique($keys);
+        return array_values(array_unique($keys));
     }
 }

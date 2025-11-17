@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace VildanBina\TranslationPruner\Scanners;
 
-class BladeScanner
+use VildanBina\TranslationPruner\Contracts\ScannerInterface;
+
+class BladeScanner implements ScannerInterface
 {
-    public function canHandle(string $filename): bool
+    public function canHandle(string $fileName): bool
     {
-        // BladeScanner is handled specially in TranslationPruner
-        // This method checks for blade.php in filename
-        return str_ends_with($filename, '.blade.php');
+        return str_ends_with($fileName, '.blade.php');
     }
 
     public function scan(string $content): array
@@ -23,6 +23,11 @@ class BladeScanner
             '/@choice\([\'"]([^\'"]+)[\'"]/',
             '/\{\{\s*__\([\'"]([^\'"]+)[\'"]/',
             '/\{\{\s*trans\([\'"]([^\'"]+)[\'"]/',
+            '/__\([\'"]([^\'"]+)[\'"]\)/',
+            '/trans\([\'"]([^\'"]+)[\'"]/',
+            '/trans_choice\([\'"]([^\'"]+)[\'"]/',
+            '/Lang::get\([\'"]([^\'"]+)[\'"]/',
+            '/Lang::choice\([\'"]([^\'"]+)[\'"]/',
         ];
 
         foreach ($patterns as $pattern) {

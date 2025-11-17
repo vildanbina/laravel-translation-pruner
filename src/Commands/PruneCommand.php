@@ -11,7 +11,8 @@ class PruneCommand extends Command
 {
     protected $signature = 'translation:prune
         {--dry-run : Show what would be deleted without actually doing it}
-        {--force : Skip confirmation when pruning}';
+        {--force : Skip confirmation when pruning}
+        {--path=* : Limit scanning to specific path(s)}';
 
     protected $description = 'Remove unused translations';
 
@@ -19,7 +20,7 @@ class PruneCommand extends Command
     {
         $this->info('Finding unused translations...');
 
-        $paths = config('translation-pruner.paths', []);
+        $paths = $this->resolvePathsOption();
         $results = $pruner->scan($paths);
 
         if (empty($results['unused_keys'])) {
@@ -28,25 +29,15 @@ class PruneCommand extends Command
             return 0;
         }
 
-        $this->info("Found {$results['unused']} unused translations:");
-        foreach ($results['unused_keys'] as $key => $locales) {
-            $this->line("  • {$key}");
-        }
+        $this->displayUnusedSummary($results['unused_keys']);
 
-        $dryRun = $this->option('dry-run');
-        $force = $this->option('force');
-
-        // Default to dry run mode unless explicitly disabled
-        $shouldRunDryRun = ! $this->input->hasParameterOption('--dry-run') || $dryRun !== false;
-
-        if ($shouldRunDryRun) {
+        if ($this->option('dry-run')) {
             $this->info("\n🔍 DRY RUN MODE - No files will be modified");
-            $this->info('To actually delete these translations, run with --dry-run=false');
 
             return 0;
         }
 
-        if (! $force && ! $this->confirm('Delete these unused translations?')) {
+        if (! $this->option('force') && ! $this->confirm('Delete these unused translations?')) {
             $this->info('Operation cancelled.');
 
             return 0;
@@ -54,8 +45,33 @@ class PruneCommand extends Command
 
         $deleted = $pruner->prune($results['unused_keys'], dryRun: false);
 
-        $this->info("✅ Deleted {$deleted} unused translations");
+        $this->info("✅ Deleted {$deleted} unused translation entries");
 
         return 0;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function resolvePathsOption(): array
+    {
+        $paths = array_filter((array) $this->option('path'));
+
+        if (! empty($paths)) {
+            return $paths;
+        }
+
+        return config('translation-pruner.paths', []);
+    }
+
+    private function displayUnusedSummary(array $unusedKeys): void
+    {
+        $totalEntries = array_sum(array_map('count', $unusedKeys));
+        $this->info("Found {$totalEntries} unused translation entries:");
+
+        foreach ($unusedKeys as $key => $locales) {
+            $localesList = implode(', ', array_keys($locales));
+            $this->line(sprintf('  • %s (%s)', $key, $localesList));
+        }
     }
 }

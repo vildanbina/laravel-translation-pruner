@@ -4,54 +4,60 @@ declare(strict_types=1);
 
 namespace VildanBina\TranslationPruner;
 
-use Exception;
-use SplFileInfo;
-use Symfony\Component\Finder\Finder;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use VildanBina\TranslationPruner\Services\TranslationRepository;
+use VildanBina\TranslationPruner\Services\UsageScanner;
 
 class TranslationPruner
 {
-    private array $scanners;
+    private TranslationRepository $repository;
 
-    private array $usedKeys = [];
+    private UsageScanner $usageScanner;
 
-    private array $availableKeys = [];
-
+    /**
+     * @var array<int, string>
+     */
     private array $excludePatterns = [];
 
-    public function __construct(array $excludePatterns = [])
-    {
-        $this->scanners = [
-            new Scanners\PhpScanner(),
-            new Scanners\BladeScanner(),
-            new Scanners\VueScanner(),
-        ];
+    /**
+     * @var array<int, string>
+     */
+    private array $defaultPaths = [];
 
-        $this->excludePatterns = $excludePatterns;
+    public function __construct(
+        ConfigRepository $config,
+        TranslationRepository $repository,
+        UsageScanner $usageScanner,
+    ) {
+        $settings = (array) $config->get('translation-pruner', []);
+
+        $this->repository = $repository;
+        $this->usageScanner = $usageScanner;
+        $this->excludePatterns = $settings['exclude'] ?? [
+            'validation.*',
+            'auth.*',
+            'pagination.*',
+            'passwords.*',
+        ];
+        $this->defaultPaths = $settings['paths'] ?? [];
     }
 
+    /**
+     * @param  array<int, string>  $paths
+     */
     public function scan(array $paths = []): array
     {
-        // Reset state
-        $this->usedKeys = [];
-        $this->availableKeys = [];
+        $availableKeys = $this->repository->all();
+        $resolvedPaths = $this->resolvePaths($paths);
+        $usedKeys = $this->usageScanner->scan($resolvedPaths);
+        $usedLookup = array_fill_keys($usedKeys, true);
 
-        // Use provided paths or sensible defaults
-        if (empty($paths)) {
-            $paths = $this->getDefaultPaths();
-        }
-
-        $this->loadAllTranslations();
-
-        if (! empty($paths)) {
-            $this->findUsedKeys($paths);
-        }
-
-        $unused = array_diff_key($this->availableKeys, $this->usedKeys);
-        $unused = $this->applyExclusions($unused);
+        $unused = $this->applyExclusions(array_diff_key($availableKeys, $usedLookup));
+        $usedCount = count(array_intersect_key($usedLookup, $availableKeys));
 
         return [
-            'total' => count($this->availableKeys),
-            'used' => count($this->usedKeys),
+            'total' => count($availableKeys),
+            'used' => $usedCount,
             'unused' => count($unused),
             'unused_keys' => $unused,
         ];
@@ -60,14 +66,16 @@ class TranslationPruner
     public function prune(array $unusedKeys, bool $dryRun = true): int
     {
         if ($dryRun) {
-            return count($unusedKeys);
+            return $this->countEntries($unusedKeys);
         }
 
         $deleted = 0;
 
         foreach ($unusedKeys as $key => $locales) {
             foreach ($locales as $locale => $info) {
-                if ($this->removeKeyFromFile($info['file'], $key, $info['group'])) {
+                $targetKey = $info['key_path'] ?? $key;
+
+                if ($this->removeKeyFromFile($info['file'], $targetKey, $info['group'] ?? null)) {
                     $deleted++;
                 }
             }
@@ -76,169 +84,62 @@ class TranslationPruner
         return $deleted;
     }
 
-    private function getDefaultPaths(): array
+    /**
+     * @param  array<int, string>  $paths
+     * @return array<int, string>
+     */
+    private function resolvePaths(array $paths): array
     {
-        $defaults = [];
+        $paths = $this->normalizePaths($paths);
 
-        if (function_exists('base_path')) {
-            $defaults[] = base_path('app');
-            $defaults[] = base_path('resources');
+        if (! empty($paths)) {
+            return $paths;
         }
 
-        return array_filter($defaults, 'is_dir');
+        $configured = $this->normalizePaths($this->defaultPaths);
+
+        if (! empty($configured)) {
+            return $configured;
+        }
+
+        return $this->normalizePaths($this->fallbackPaths());
     }
 
-    private function loadAllTranslations(): void
+    /**
+     * @param  array<int, string>  $paths
+     * @return array<int, string>
+     */
+    private function normalizePaths(array $paths): array
     {
-        $langPath = function_exists('lang_path') ? lang_path() : getcwd().'/lang';
+        $filtered = array_filter($paths, static fn (string $path): bool => is_dir($path));
 
-        if (! is_dir($langPath)) {
-            return;
-        }
-
-        // Load JSON translations
-        foreach (glob($langPath.'/*.json') ?: [] as $file) {
-            $locale = basename($file, '.json');
-            $translations = json_decode(file_get_contents($file), true) ?? [];
-
-            foreach ($translations as $key => $value) {
-                $this->availableKeys[$key][$locale] = [
-                    'file' => $file,
-                    'group' => 'json',
-                    'value' => $value,
-                ];
-            }
-        }
-
-        // Load array translations
-        foreach (glob($langPath.'/*', GLOB_ONLYDIR) ?: [] as $localeDir) {
-            $locale = basename($localeDir);
-
-            foreach (glob($localeDir.'/*.php') ?: [] as $file) {
-                $group = basename($file, '.php');
-                $translations = include $file;
-
-                if (! is_array($translations)) {
-                    continue;
-                }
-
-                foreach ($translations as $key => $value) {
-                    $fullKey = $group.'.'.$key;
-                    $this->availableKeys[$fullKey][$locale] = [
-                        'file' => $file,
-                        'group' => $group,
-                        'value' => $value,
-                    ];
-                }
-            }
-        }
+        return array_values(array_unique($filtered));
     }
 
-    private function findUsedKeys(array $paths): void
+    /**
+     * @return array<int, string>
+     */
+    private function fallbackPaths(): array
     {
-        try {
-            $finder = (new Finder())
-                ->files()
-                ->in($paths)
-                ->name('*.php')
-                ->name('*.blade.php')
-                ->name('*.vue')
-                ->name('*.js')
-                ->name('*.ts')
-                ->exclude('vendor')
-                ->exclude('node_modules')
-                ->ignoreUnreadableDirs();
-
-            foreach ($finder as $file) {
-                $scanner = $this->getScannerFor($file);
-
-                if (! $scanner) {
-                    continue;
-                }
-
-                $keys = $scanner->scan($file->getContents());
-
-                foreach ($keys as $key) {
-                    $this->usedKeys[$key] = true;
-                }
-            }
-        } catch (Exception $e) {
-            // Silently handle directory issues
+        if (! function_exists('base_path')) {
+            return [];
         }
+
+        return array_filter([
+            base_path('app'),
+            base_path('resources'),
+        ], static fn ($path) => is_dir($path));
     }
 
-    private function getScannerFor(SplFileInfo $file): ?object
+    private function removeKeyFromFile(string $file, string $key, ?string $group): bool
     {
-        $filename = $file->getFilename();
+        $loader = $this->repository->getLoaderFor($file);
 
-        // Blade files need special handling since they end with .blade.php
-        if (str_ends_with($filename, '.blade.php')) {
-            foreach ($this->scanners as $scanner) {
-                if ($scanner instanceof Scanners\BladeScanner) {
-                    return $scanner;
-                }
-            }
-        }
-
-        // For other files, use the extension
-        $extension = $file->getExtension();
-
-        foreach ($this->scanners as $scanner) {
-            if ($scanner->canHandle($extension)) {
-                return $scanner;
-            }
-        }
-
-        return null;
-    }
-
-    private function removeKeyFromFile(string $file, string $key, string $group): bool
-    {
-        if ($group === 'json') {
-            return $this->removeJsonKey($file, $key);
-        }
-
-        return $this->removeArrayKey($file, $key, $group);
-    }
-
-    private function removeJsonKey(string $file, string $key): bool
-    {
-        $translations = json_decode(file_get_contents($file), true);
-
-        if (! isset($translations[$key])) {
+        if (! $loader) {
             return false;
         }
 
-        unset($translations[$key]);
-
-        if (empty($translations)) {
-            return unlink($file);
-        }
-
-        $content = json_encode($translations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-
-        return file_put_contents($file, $content) !== false;
-    }
-
-    private function removeArrayKey(string $file, string $fullKey, string $group): bool
-    {
-        $translations = include $file;
-        $keyParts = explode('.', $fullKey, 2);
-        $key = $keyParts[1] ?? $fullKey;
-
-        if (! isset($translations[$key])) {
-            return false;
-        }
-
-        unset($translations[$key]);
-
-        if (empty($translations)) {
-            return unlink($file);
-        }
-
-        $content = "<?php\n\nreturn ".var_export($translations, true).";\n";
-
-        return file_put_contents($file, $content) !== false;
+        return $loader->remove($file, $key, $group);
     }
 
     private function applyExclusions(array $unused): array
@@ -264,5 +165,16 @@ class TranslationPruner
         $regex = '/^'.str_replace('\*', '.*', preg_quote($pattern, '/')).'$/';
 
         return (bool) preg_match($regex, $key);
+    }
+
+    private function countEntries(array $unusedKeys): int
+    {
+        $count = 0;
+
+        foreach ($unusedKeys as $locales) {
+            $count += count($locales);
+        }
+
+        return $count;
     }
 }
