@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use VildanBina\TranslationPruner\Scanners\PhpScanner;
 
 it('can handle php files', function () {

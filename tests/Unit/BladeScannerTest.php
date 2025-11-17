@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use VildanBina\TranslationPruner\Scanners\BladeScanner;
 
 it('can handle blade files', function () {

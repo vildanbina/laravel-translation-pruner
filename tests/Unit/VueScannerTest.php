@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use VildanBina\TranslationPruner\Scanners\VueScanner;
 
 it('can handle vue and js files', function () {

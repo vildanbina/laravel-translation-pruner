@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 use VildanBina\TranslationPruner\TranslationPruner;
 
 beforeEach(function () {
     // Create test lang directory
     $langPath = lang_path();
-    if (!is_dir($langPath)) {
+    if (! is_dir($langPath)) {
         mkdir($langPath, 0755, true);
     }
 });
@@ -35,16 +37,18 @@ it('can scan for translations', function () {
 it('finds unused translations', function () {
     // Create translation files
     $enDir = lang_path('en');
-    if (!is_dir($enDir)) {
-        if (!is_dir($enDir)) { mkdir($enDir, 0755, true); }
+    if (! is_dir($enDir)) {
+        if (! is_dir($enDir)) {
+            mkdir($enDir, 0755, true);
+        }
     }
 
-    file_put_contents($enDir . '/messages.php', "<?php\n\nreturn [\n    'welcome' => 'Welcome',\n    'unused' => 'Not used',\n];");
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn [\n    'welcome' => 'Welcome',\n    'unused' => 'Not used',\n];");
 
     // Create code that uses only one translation
-    $testDir = sys_get_temp_dir() . '/translation-pruner-test-' . uniqid();
+    $testDir = sys_get_temp_dir().'/translation-pruner-test-'.uniqid();
     mkdir($testDir, 0755, true);
-    file_put_contents($testDir . '/test.php', "<?php echo __('messages.welcome');");
+    file_put_contents($testDir.'/test.php', "<?php echo __('messages.welcome');");
 
     $pruner = new TranslationPruner();
     $result = $pruner->scan([$testDir]);
@@ -53,20 +57,22 @@ it('finds unused translations', function () {
         ->and($result['unused_keys'])->toHaveKey('messages.unused');
 
     // Cleanup
-    unlink($testDir . '/test.php');
+    unlink($testDir.'/test.php');
     rmdir($testDir);
 });
 
 it('identifies used translations', function () {
     // Create translation file
     $enDir = lang_path('en');
-    if (!is_dir($enDir)) { mkdir($enDir, 0755, true); }
-    file_put_contents($enDir . '/messages.php', "<?php\n\nreturn [\n    'welcome' => 'Welcome',\n];");
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn [\n    'welcome' => 'Welcome',\n];");
 
     // Create code that uses the translation
-    $testDir = sys_get_temp_dir() . '/translation-pruner-test-' . uniqid();
+    $testDir = sys_get_temp_dir().'/translation-pruner-test-'.uniqid();
     mkdir($testDir, 0755, true);
-    file_put_contents($testDir . '/test.php', "<?php echo __('messages.welcome');");
+    file_put_contents($testDir.'/test.php', "<?php echo __('messages.welcome');");
 
     $pruner = new TranslationPruner();
     $result = $pruner->scan([$testDir]);
@@ -75,7 +81,7 @@ it('identifies used translations', function () {
         ->and($result['unused'])->toBe(0);
 
     // Cleanup
-    unlink($testDir . '/test.php');
+    unlink($testDir.'/test.php');
     rmdir($testDir);
 });
 
@@ -84,9 +90,9 @@ it('handles JSON translations', function () {
     file_put_contents(lang_path('en.json'), json_encode(['Welcome' => 'Welcome', 'Goodbye' => 'Goodbye']));
 
     // Create code that uses only one
-    $testDir = sys_get_temp_dir() . '/translation-pruner-test-' . uniqid();
+    $testDir = sys_get_temp_dir().'/translation-pruner-test-'.uniqid();
     mkdir($testDir, 0755, true);
-    file_put_contents($testDir . '/test.php', "<?php echo __('Welcome');");
+    file_put_contents($testDir.'/test.php', "<?php echo __('Welcome');");
 
     $pruner = new TranslationPruner();
     $result = $pruner->scan([$testDir]);
@@ -96,20 +102,22 @@ it('handles JSON translations', function () {
         ->and($result['unused'])->toBe(1);
 
     // Cleanup
-    unlink($testDir . '/test.php');
+    unlink($testDir.'/test.php');
     rmdir($testDir);
 });
 
 it('respects exclusion patterns', function () {
     // Create translation file
     $enDir = lang_path('en');
-    if (!is_dir($enDir)) { mkdir($enDir, 0755, true); }
-    file_put_contents($enDir . '/validation.php', "<?php\n\nreturn [\n    'required' => 'Required',\n    'email' => 'Email',\n];");
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+    file_put_contents($enDir.'/validation.php', "<?php\n\nreturn [\n    'required' => 'Required',\n    'email' => 'Email',\n];");
 
     // Don't use any of them in code
-    $testDir = sys_get_temp_dir() . '/translation-pruner-test-' . uniqid();
+    $testDir = sys_get_temp_dir().'/translation-pruner-test-'.uniqid();
     mkdir($testDir, 0755, true);
-    file_put_contents($testDir . '/test.php', "<?php echo 'test';");
+    file_put_contents($testDir.'/test.php', "<?php echo 'test';");
 
     $pruner = new TranslationPruner(['validation.*']);
     $result = $pruner->scan([$testDir]);
@@ -118,19 +126,21 @@ it('respects exclusion patterns', function () {
     expect($result['unused'])->toBe(0);
 
     // Cleanup
-    unlink($testDir . '/test.php');
+    unlink($testDir.'/test.php');
     rmdir($testDir);
 });
 
 it('can prune translations in dry run mode', function () {
     // Create translation file
     $enDir = lang_path('en');
-    if (!is_dir($enDir)) { mkdir($enDir, 0755, true); }
-    file_put_contents($enDir . '/messages.php', "<?php\n\nreturn [\n    'welcome' => 'Welcome',\n    'unused' => 'Not used',\n];");
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn [\n    'welcome' => 'Welcome',\n    'unused' => 'Not used',\n];");
 
-    $testDir = sys_get_temp_dir() . '/translation-pruner-test-' . uniqid();
+    $testDir = sys_get_temp_dir().'/translation-pruner-test-'.uniqid();
     mkdir($testDir, 0755, true);
-    file_put_contents($testDir . '/test.php', "<?php echo __('messages.welcome');");
+    file_put_contents($testDir.'/test.php', "<?php echo __('messages.welcome');");
 
     $pruner = new TranslationPruner();
     $result = $pruner->scan([$testDir]);
@@ -140,22 +150,24 @@ it('can prune translations in dry run mode', function () {
     expect($deleted)->toBe(1);
 
     // File should still exist (dry run)
-    expect(file_exists($enDir . '/messages.php'))->toBeTrue();
+    expect(file_exists($enDir.'/messages.php'))->toBeTrue();
 
     // Cleanup
-    unlink($testDir . '/test.php');
+    unlink($testDir.'/test.php');
     rmdir($testDir);
 });
 
 it('can actually delete unused translations', function () {
     // Create translation file
     $enDir = lang_path('en');
-    if (!is_dir($enDir)) { mkdir($enDir, 0755, true); }
-    file_put_contents($enDir . '/messages.php', "<?php\n\nreturn [\n    'welcome' => 'Welcome',\n    'unused' => 'Not used',\n];");
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn [\n    'welcome' => 'Welcome',\n    'unused' => 'Not used',\n];");
 
-    $testDir = sys_get_temp_dir() . '/translation-pruner-test-' . uniqid();
+    $testDir = sys_get_temp_dir().'/translation-pruner-test-'.uniqid();
     mkdir($testDir, 0755, true);
-    file_put_contents($testDir . '/test.php', "<?php echo __('messages.welcome');");
+    file_put_contents($testDir.'/test.php', "<?php echo __('messages.welcome');");
 
     $pruner = new TranslationPruner();
     $result = $pruner->scan([$testDir]);
@@ -165,11 +177,11 @@ it('can actually delete unused translations', function () {
     expect($deleted)->toBe(1);
 
     // Verify the unused key was actually removed
-    $translations = include $enDir . '/messages.php';
+    $translations = include $enDir.'/messages.php';
     expect($translations)->toHaveKey('welcome')
         ->and($translations)->not->toHaveKey('unused');
 
     // Cleanup
-    unlink($testDir . '/test.php');
+    unlink($testDir.'/test.php');
     rmdir($testDir);
 });

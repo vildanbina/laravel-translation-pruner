@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace VildanBina\TranslationPruner\Tests;
 
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -31,6 +33,6 @@ class TestCase extends Orchestra
 
     protected function getTestPath(string $path = ''): string
     {
-        return __DIR__ . '/fixtures/' . ltrim($path, '/');
+        return __DIR__.'/fixtures/'.mb_ltrim($path, '/');
     }
 }

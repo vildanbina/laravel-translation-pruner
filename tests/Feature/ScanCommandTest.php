@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 use function Pest\Laravel\artisan;
 
 beforeEach(function () {
     $langPath = lang_path();
-    if (!is_dir($langPath)) {
+    if (! is_dir($langPath)) {
         mkdir($langPath, 0755, true);
     }
 });
@@ -35,13 +37,15 @@ it('shows no unused translations message when all are used', function () {
 it('lists unused translations', function () {
     // Create translation file with unused key
     $enDir = lang_path('en');
-    if (!is_dir($enDir)) { mkdir($enDir, 0755, true); }
-    file_put_contents($enDir . '/messages.php', "<?php\n\nreturn [\n    'welcome' => 'Welcome',\n    'unused' => 'Not used',\n];");
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn [\n    'welcome' => 'Welcome',\n    'unused' => 'Not used',\n];");
 
     // Create code that uses only welcome
-    $testDir = sys_get_temp_dir() . '/translation-pruner-test-' . uniqid();
+    $testDir = sys_get_temp_dir().'/translation-pruner-test-'.uniqid();
     mkdir($testDir, 0755, true);
-    file_put_contents($testDir . '/test.php', "<?php echo __('messages.welcome');");
+    file_put_contents($testDir.'/test.php', "<?php echo __('messages.welcome');");
 
     config()->set('translation-pruner.paths', [$testDir]);
 
@@ -51,7 +55,7 @@ it('lists unused translations', function () {
         ->assertSuccessful();
 
     // Cleanup
-    unlink($testDir . '/test.php');
+    unlink($testDir.'/test.php');
     rmdir($testDir);
 });
 
