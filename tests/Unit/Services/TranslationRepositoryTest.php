@@ -46,7 +46,7 @@ it('loads json translations with metadata', function () {
 
 it('loads php translations including nested keys', function () {
     $this->filesystem->makeDirectory($this->langPath.'/en');
-    file_put_contents($this->langPath.'/en/messages.php', <<<PHP
+    file_put_contents($this->langPath.'/en/messages.php', <<<'PHP'
     <?php
 
     return [

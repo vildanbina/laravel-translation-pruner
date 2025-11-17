@@ -30,9 +30,6 @@ class UsageScanner
      */
     private array $filePatterns = [];
 
-    /**
-     * @param ConfigRepository $config
-     */
     public function __construct(ConfigRepository $config)
     {
         $settings = (array) $config->get('translation-pruner', []);
