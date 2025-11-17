@@ -18,17 +18,17 @@ class TestCase extends Orchestra
 
     protected function defineEnvironment($app): void
     {
-        $app['config']->set('translation-pruner.paths', [
+        $app->make('config')->set('translation-pruner.paths', [
             $this->getTestPath('app'),
             $this->getTestPath('resources'),
         ]);
 
-        $app['config']->set('translation-pruner.exclude', [
+        $app->make('config')->set('translation-pruner.exclude', [
             'validation.*',
             'auth.*',
         ]);
 
-        $app['config']->set('app.locale', 'en');
+        $app->make('config')->set('app.locale', 'en');
     }
 
     protected function getTestPath(string $path = ''): string

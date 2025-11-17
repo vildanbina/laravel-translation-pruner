@@ -72,7 +72,7 @@ class TranslationPruner
         $deleted = 0;
 
         foreach ($unusedKeys as $key => $locales) {
-            foreach ($locales as $locale => $info) {
+            foreach ($locales as $info) {
                 $targetKey = $info['key_path'] ?? $key;
 
                 if ($this->removeKeyFromFile($info['file'], $targetKey, $info['group'] ?? null)) {

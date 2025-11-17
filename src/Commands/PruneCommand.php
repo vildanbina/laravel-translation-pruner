@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace VildanBina\TranslationPruner\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Config\Repository;
 use VildanBina\TranslationPruner\TranslationPruner;
 
 class PruneCommand extends Command
@@ -15,6 +16,14 @@ class PruneCommand extends Command
         {--path=* : Limit scanning to specific path(s)}';
 
     protected $description = 'Remove unused translations';
+
+    /**
+     * Create a new console command instance.
+     */
+    public function __construct(private readonly Repository $repository)
+    {
+        parent::__construct();
+    }
 
     public function handle(TranslationPruner $pruner): int
     {
@@ -61,7 +70,7 @@ class PruneCommand extends Command
             return $paths;
         }
 
-        return config('translation-pruner.paths', []);
+        return $this->repository->get('translation-pruner.paths', []);
     }
 
     private function displayUnusedSummary(array $unusedKeys): void
