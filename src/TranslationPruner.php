@@ -1,14 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace VildanBina\TranslationPruner;
 
+use Exception;
+use SplFileInfo;
 use Symfony\Component\Finder\Finder;
 
 class TranslationPruner
 {
     private array $scanners;
+
     private array $usedKeys = [];
+
     private array $availableKeys = [];
+
     private array $excludePatterns = [];
 
     public function __construct(array $excludePatterns = [])
@@ -35,7 +42,7 @@ class TranslationPruner
 
         $this->loadAllTranslations();
 
-        if (!empty($paths)) {
+        if (! empty($paths)) {
             $this->findUsedKeys($paths);
         }
 
@@ -83,14 +90,14 @@ class TranslationPruner
 
     private function loadAllTranslations(): void
     {
-        $langPath = function_exists('lang_path') ? lang_path() : getcwd() . '/lang';
+        $langPath = function_exists('lang_path') ? lang_path() : getcwd().'/lang';
 
-        if (!is_dir($langPath)) {
+        if (! is_dir($langPath)) {
             return;
         }
 
         // Load JSON translations
-        foreach (glob($langPath . '/*.json') ?: [] as $file) {
+        foreach (glob($langPath.'/*.json') ?: [] as $file) {
             $locale = basename($file, '.json');
             $translations = json_decode(file_get_contents($file), true) ?? [];
 
@@ -104,19 +111,19 @@ class TranslationPruner
         }
 
         // Load array translations
-        foreach (glob($langPath . '/*', GLOB_ONLYDIR) ?: [] as $localeDir) {
+        foreach (glob($langPath.'/*', GLOB_ONLYDIR) ?: [] as $localeDir) {
             $locale = basename($localeDir);
 
-            foreach (glob($localeDir . '/*.php') ?: [] as $file) {
+            foreach (glob($localeDir.'/*.php') ?: [] as $file) {
                 $group = basename($file, '.php');
                 $translations = include $file;
 
-                if (!is_array($translations)) {
+                if (! is_array($translations)) {
                     continue;
                 }
 
                 foreach ($translations as $key => $value) {
-                    $fullKey = $group . '.' . $key;
+                    $fullKey = $group.'.'.$key;
                     $this->availableKeys[$fullKey][$locale] = [
                         'file' => $file,
                         'group' => $group,
@@ -145,7 +152,7 @@ class TranslationPruner
             foreach ($finder as $file) {
                 $scanner = $this->getScannerFor($file);
 
-                if (!$scanner) {
+                if (! $scanner) {
                     continue;
                 }
 
@@ -155,12 +162,12 @@ class TranslationPruner
                     $this->usedKeys[$key] = true;
                 }
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Silently handle directory issues
         }
     }
 
-    private function getScannerFor(\SplFileInfo $file): ?object
+    private function getScannerFor(SplFileInfo $file): ?object
     {
         $filename = $file->getFilename();
 
@@ -198,7 +205,7 @@ class TranslationPruner
     {
         $translations = json_decode(file_get_contents($file), true);
 
-        if (!isset($translations[$key])) {
+        if (! isset($translations[$key])) {
             return false;
         }
 
@@ -209,6 +216,7 @@ class TranslationPruner
         }
 
         $content = json_encode($translations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
         return file_put_contents($file, $content) !== false;
     }
 
@@ -218,7 +226,7 @@ class TranslationPruner
         $keyParts = explode('.', $fullKey, 2);
         $key = $keyParts[1] ?? $fullKey;
 
-        if (!isset($translations[$key])) {
+        if (! isset($translations[$key])) {
             return false;
         }
 
@@ -228,7 +236,8 @@ class TranslationPruner
             return unlink($file);
         }
 
-        $content = "<?php\n\nreturn " . var_export($translations, true) . ";\n";
+        $content = "<?php\n\nreturn ".var_export($translations, true).";\n";
+
         return file_put_contents($file, $content) !== false;
     }
 
@@ -252,7 +261,8 @@ class TranslationPruner
 
     private function matchesPattern(string $key, string $pattern): bool
     {
-        $regex = '/^' . str_replace('\*', '.*', preg_quote($pattern, '/')) . '$/';
+        $regex = '/^'.str_replace('\*', '.*', preg_quote($pattern, '/')).'$/';
+
         return (bool) preg_match($regex, $key);
     }
 }

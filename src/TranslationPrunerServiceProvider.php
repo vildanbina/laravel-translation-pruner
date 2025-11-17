@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace VildanBina\TranslationPruner;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use VildanBina\TranslationPruner\Commands\{ScanCommand, PruneCommand};
+use VildanBina\TranslationPruner\Commands\PruneCommand;
+use VildanBina\TranslationPruner\Commands\ScanCommand;
 
 class TranslationPrunerServiceProvider extends PackageServiceProvider
 {

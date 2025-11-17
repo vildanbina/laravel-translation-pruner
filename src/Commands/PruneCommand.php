@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace VildanBina\TranslationPruner\Commands;
 
 use Illuminate\Console\Command;
@@ -22,6 +24,7 @@ class PruneCommand extends Command
 
         if (empty($results['unused_keys'])) {
             $this->info('✅ No unused translations to remove!');
+
             return 0;
         }
 
@@ -34,22 +37,25 @@ class PruneCommand extends Command
         $force = $this->option('force');
 
         // Default to dry run mode unless explicitly disabled
-        $shouldRunDryRun = !$this->input->hasParameterOption('--dry-run') || $dryRun !== false;
+        $shouldRunDryRun = ! $this->input->hasParameterOption('--dry-run') || $dryRun !== false;
 
         if ($shouldRunDryRun) {
             $this->info("\n🔍 DRY RUN MODE - No files will be modified");
-            $this->info("To actually delete these translations, run with --dry-run=false");
+            $this->info('To actually delete these translations, run with --dry-run=false');
+
             return 0;
         }
 
-        if (!$force && !$this->confirm('Delete these unused translations?')) {
+        if (! $force && ! $this->confirm('Delete these unused translations?')) {
             $this->info('Operation cancelled.');
+
             return 0;
         }
 
         $deleted = $pruner->prune($results['unused_keys'], dryRun: false);
 
         $this->info("✅ Deleted {$deleted} unused translations");
+
         return 0;
     }
 }
