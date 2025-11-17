@@ -7,14 +7,21 @@ use VildanBina\TranslationPruner\Scanners\PhpScanner;
 it('can handle php files', function () {
     $scanner = new PhpScanner();
 
-    expect($scanner->canHandle('php'))->toBeTrue();
+    expect($scanner->canHandle('test.php'))->toBeTrue();
+    expect($scanner->canHandle('/path/to/file.php'))->toBeTrue();
+});
+
+it('cannot handle blade.php files', function () {
+    $scanner = new PhpScanner();
+
+    expect($scanner->canHandle('test.blade.php'))->toBeFalse();
 });
 
 it('cannot handle non-php files', function () {
     $scanner = new PhpScanner();
 
-    expect($scanner->canHandle('blade'))->toBeFalse();
-    expect($scanner->canHandle('vue'))->toBeFalse();
+    expect($scanner->canHandle('test.vue'))->toBeFalse();
+    expect($scanner->canHandle('test.js'))->toBeFalse();
 });
 
 it('scans basic __ translations', function () {

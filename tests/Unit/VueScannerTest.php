@@ -7,18 +7,18 @@ use VildanBina\TranslationPruner\Scanners\VueScanner;
 it('can handle vue and js files', function () {
     $scanner = new VueScanner();
 
-    expect($scanner->canHandle('vue'))->toBeTrue();
-    expect($scanner->canHandle('js'))->toBeTrue();
-    expect($scanner->canHandle('ts'))->toBeTrue();
-    expect($scanner->canHandle('jsx'))->toBeTrue();
-    expect($scanner->canHandle('tsx'))->toBeTrue();
+    expect($scanner->canHandle('App.vue'))->toBeTrue();
+    expect($scanner->canHandle('app.js'))->toBeTrue();
+    expect($scanner->canHandle('types.ts'))->toBeTrue();
+    expect($scanner->canHandle('Component.jsx'))->toBeTrue();
+    expect($scanner->canHandle('Component.tsx'))->toBeTrue();
 });
 
 it('cannot handle other files', function () {
     $scanner = new VueScanner();
 
-    expect($scanner->canHandle('php'))->toBeFalse();
-    expect($scanner->canHandle('blade'))->toBeFalse();
+    expect($scanner->canHandle('test.php'))->toBeFalse();
+    expect($scanner->canHandle('test.blade.php'))->toBeFalse();
 });
 
 it('scans $t function calls', function () {

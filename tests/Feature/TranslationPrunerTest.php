@@ -25,7 +25,7 @@ afterEach(function () {
 });
 
 it('can scan for translations', function () {
-    $pruner = new TranslationPruner();
+    $pruner = app(TranslationPruner::class);
     $result = $pruner->scan();
 
     expect($result)->toHaveKey('total')
@@ -50,7 +50,7 @@ it('finds unused translations', function () {
     mkdir($testDir, 0755, true);
     file_put_contents($testDir.'/test.php', "<?php echo __('messages.welcome');");
 
-    $pruner = new TranslationPruner();
+    $pruner = app(TranslationPruner::class);
     $result = $pruner->scan([$testDir]);
 
     expect($result['unused'])->toBe(1)
@@ -74,7 +74,7 @@ it('identifies used translations', function () {
     mkdir($testDir, 0755, true);
     file_put_contents($testDir.'/test.php', "<?php echo __('messages.welcome');");
 
-    $pruner = new TranslationPruner();
+    $pruner = app(TranslationPruner::class);
     $result = $pruner->scan([$testDir]);
 
     expect($result['used'])->toBe(1)
@@ -94,7 +94,7 @@ it('handles JSON translations', function () {
     mkdir($testDir, 0755, true);
     file_put_contents($testDir.'/test.php', "<?php echo __('Welcome');");
 
-    $pruner = new TranslationPruner();
+    $pruner = app(TranslationPruner::class);
     $result = $pruner->scan([$testDir]);
 
     expect($result['total'])->toBe(2)
@@ -103,6 +103,63 @@ it('handles JSON translations', function () {
 
     // Cleanup
     unlink($testDir.'/test.php');
+    rmdir($testDir);
+});
+
+it('detects translations in react files', function () {
+    $enDir = lang_path('en');
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn [\n    'react_used' => 'Used',\n    'react_translated' => 'Translated',\n    'react_unused' => 'Unused',\n];");
+
+    $testDir = sys_get_temp_dir().'/translation-pruner-react-'.uniqid();
+    mkdir($testDir, 0755, true);
+    file_put_contents($testDir.'/Component.jsx', <<<'JSX'
+    import { Trans, useTranslation } from 'react-i18next';
+
+    export default function Example() {
+        const { t } = useTranslation();
+
+        return (
+            <div title={t('messages.react_used')}>
+                <Trans i18nKey="messages.react_translated" />
+            </div>
+        );
+    }
+    JSX);
+
+    $pruner = app(TranslationPruner::class);
+    $result = $pruner->scan([$testDir]);
+
+    expect($result['unused_keys'])->toHaveKey('messages.react_unused')
+        ->and($result['unused_keys'])->not->toHaveKey('messages.react_used')
+        ->and($result['unused_keys'])->not->toHaveKey('messages.react_translated');
+
+    unlink($testDir.'/Component.jsx');
+    rmdir($testDir);
+});
+
+it('detects translations in livewire blade attributes', function () {
+    $enDir = lang_path('en');
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn [\n    'tooltip' => 'Tooltip',\n    'unused' => 'Unused',\n];");
+
+    $testDir = sys_get_temp_dir().'/translation-pruner-livewire-'.uniqid();
+    mkdir($testDir, 0755, true);
+    file_put_contents($testDir.'/component.blade.php', "<div :title=\"__('messages.tooltip')\"></div>");
+
+    $pruner = app(TranslationPruner::class);
+    $result = $pruner->scan([$testDir]);
+
+    expect($result['unused_keys'])->toHaveKey('messages.unused')
+        ->and($result['unused_keys'])->not->toHaveKey('messages.tooltip');
+
+    unlink($testDir.'/component.blade.php');
     rmdir($testDir);
 });
 
@@ -119,7 +176,7 @@ it('respects exclusion patterns', function () {
     mkdir($testDir, 0755, true);
     file_put_contents($testDir.'/test.php', "<?php echo 'test';");
 
-    $pruner = new TranslationPruner(['validation.*']);
+    $pruner = app(TranslationPruner::class);
     $result = $pruner->scan([$testDir]);
 
     // Should not find them as unused because they're excluded
@@ -142,7 +199,7 @@ it('can prune translations in dry run mode', function () {
     mkdir($testDir, 0755, true);
     file_put_contents($testDir.'/test.php', "<?php echo __('messages.welcome');");
 
-    $pruner = new TranslationPruner();
+    $pruner = app(TranslationPruner::class);
     $result = $pruner->scan([$testDir]);
 
     $deleted = $pruner->prune($result['unused_keys'], dryRun: true);
@@ -169,7 +226,7 @@ it('can actually delete unused translations', function () {
     mkdir($testDir, 0755, true);
     file_put_contents($testDir.'/test.php', "<?php echo __('messages.welcome');");
 
-    $pruner = new TranslationPruner();
+    $pruner = app(TranslationPruner::class);
     $result = $pruner->scan([$testDir]);
 
     $deleted = $pruner->prune($result['unused_keys'], dryRun: false);
@@ -183,5 +240,31 @@ it('can actually delete unused translations', function () {
 
     // Cleanup
     unlink($testDir.'/test.php');
+    rmdir($testDir);
+});
+
+it('removes nested translations completely', function () {
+    $enDir = lang_path('en');
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn [\n    'nested' => [\n        'child' => 'value',\n    ],\n];");
+
+    $testDir = sys_get_temp_dir().'/translation-pruner-nested-'.uniqid();
+    mkdir($testDir, 0755, true);
+    file_put_contents($testDir.'/noop.php', "<?php echo 'noop';");
+
+    $pruner = app(TranslationPruner::class);
+    $result = $pruner->scan([$testDir]);
+
+    expect($result['unused_keys'])->toHaveKey('messages.nested.child');
+
+    $deleted = $pruner->prune($result['unused_keys'], dryRun: false);
+    expect($deleted)->toBe(1);
+
+    expect(file_exists($enDir.'/messages.php'))->toBeFalse();
+
+    unlink($testDir.'/noop.php');
     rmdir($testDir);
 });

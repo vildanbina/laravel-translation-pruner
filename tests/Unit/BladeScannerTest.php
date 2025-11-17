@@ -14,8 +14,9 @@ it('can handle blade files', function () {
 it('cannot handle non-blade files', function () {
     $scanner = new BladeScanner();
 
-    expect($scanner->canHandle('php'))->toBeFalse();
-    expect($scanner->canHandle('vue'))->toBeFalse();
+    expect($scanner->canHandle('test.php'))->toBeFalse();
+    expect($scanner->canHandle('test.vue'))->toBeFalse();
+    expect($scanner->canHandle('test.js'))->toBeFalse();
 });
 
 it('scans @lang directive', function () {
@@ -54,6 +55,15 @@ it('scans blade echo with trans function', function () {
     expect($keys)->toContain('auth.login');
 });
 
+it('scans trans_choice helper in blade', function () {
+    $scanner = new BladeScanner();
+    $content = "{{ trans_choice('messages.items', 2) }}";
+
+    $keys = $scanner->scan($content);
+
+    expect($keys)->toContain('messages.items');
+});
+
 it('scans multiple translations in blade template', function () {
     $scanner = new BladeScanner();
     $content = <<<'BLADE'
@@ -77,4 +87,14 @@ it('handles double quotes in blade', function () {
     $keys = $scanner->scan($content);
 
     expect($keys)->toContain('messages.welcome');
+});
+
+it('detects translations in livewire attributes', function () {
+    $scanner = new BladeScanner();
+    $content = '<div :title="__(\'messages.tooltip\')" wire:loading.attr="__(\'messages.loading\')"></div>';
+
+    $keys = $scanner->scan($content);
+
+    expect($keys)->toContain('messages.tooltip')
+        ->and($keys)->toContain('messages.loading');
 });
