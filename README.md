@@ -1,5 +1,11 @@
 # Laravel Translation Pruner
 
+[![Latest Stable Version](https://poser.pugx.org/vildanbina/laravel-translation-pruner/v)](https://packagist.org/packages/vildanbina/laravel-translation-pruner)
+[![Total Downloads](https://poser.pugx.org/vildanbina/laravel-translation-pruner/downloads)](https://packagist.org/packages/vildanbina/laravel-translation-pruner)
+[![License](https://poser.pugx.org/vildanbina/laravel-translation-pruner/license)](https://packagist.org/packages/vildanbina/laravel-translation-pruner)
+[![PHP Version Require](https://poser.pugx.org/vildanbina/laravel-translation-pruner/require/php)](https://packagist.org/packages/vildanbina/laravel-translation-pruner)
+[![GitHub Workflow Status (main)](https://img.shields.io/github/actions/workflow/status/vildanbina/laravel-translation-pruner/ci.yml?label=Tests)]
+
 A simple Laravel package to find and remove unused translations from your codebase.
 
 ## Installation
@@ -94,11 +100,14 @@ The package looks for translations in:
 
 **Blade templates:**
 - `@lang('messages.welcome')`
+- `@choice('messages.items', $count)`
 - `{{ __('messages.welcome') }}`
+- `:<div :title="__('messages.tooltip')">`
 
 **Vue/JavaScript files:**
 - `$t('messages.welcome')`
 - `i18n.t('auth.login')`
+- `v-t="messages.welcome"`
 
 **React (JSX/TSX) files:**
 - `t('messages.welcome')`
