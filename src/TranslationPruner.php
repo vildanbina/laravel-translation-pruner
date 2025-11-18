@@ -29,21 +29,31 @@ class TranslationPruner
         TranslationRepository $repository,
         UsageScanner $usageScanner,
     ) {
+        /** @var array<string, mixed> $settings */
         $settings = (array) $config->get('translation-pruner', []);
 
         $this->repository = $repository;
         $this->usageScanner = $usageScanner;
-        $this->excludePatterns = $settings['exclude'] ?? [
-            'validation.*',
-            'auth.*',
-            'pagination.*',
-            'passwords.*',
-        ];
-        $this->defaultPaths = $settings['paths'] ?? [];
+        $this->excludePatterns = $this->normalizeStringList(
+            $settings['exclude'] ?? null,
+            [
+                'validation.*',
+                'auth.*',
+                'pagination.*',
+                'passwords.*',
+            ]
+        );
+        $this->defaultPaths = $this->normalizeStringList($settings['paths'] ?? null, []);
     }
 
     /**
      * @param  array<int, string>  $paths
+     * @return array{
+     *     total: int,
+     *     used: int,
+     *     unused: int,
+     *     unused_keys: array<string, array<string, array<string, mixed>>>
+     * }
      */
     public function scan(array $paths = []): array
     {
@@ -63,6 +73,9 @@ class TranslationPruner
         ];
     }
 
+    /**
+     * @param  array<string, array<string, array<string, mixed>>>  $unusedKeys
+     */
     public function prune(array $unusedKeys, bool $dryRun = true): int
     {
         if ($dryRun) {
@@ -73,9 +86,20 @@ class TranslationPruner
 
         foreach ($unusedKeys as $key => $locales) {
             foreach ($locales as $info) {
-                $targetKey = $info['key_path'] ?? $key;
+                $file = $info['file'] ?? null;
 
-                if ($this->removeKeyFromFile($info['file'], $targetKey, $info['group'] ?? null)) {
+                if (! is_string($file)) {
+                    continue;
+                }
+
+                $targetKey = is_string($info['key_path'] ?? null)
+                    ? $info['key_path']
+                    : $key;
+
+                $group = $info['group'] ?? null;
+                $group = is_string($group) && $group !== '' ? $group : null;
+
+                if ($this->removeKeyFromFile($file, $targetKey, $group)) {
                     $deleted++;
                 }
             }
@@ -142,6 +166,10 @@ class TranslationPruner
         return $loader->remove($file, $key, $group);
     }
 
+    /**
+     * @param  array<string, array<string, array<string, mixed>>>  $unused
+     * @return array<string, array<string, array<string, mixed>>>
+     */
     private function applyExclusions(array $unused): array
     {
         if (empty($this->excludePatterns)) {
@@ -167,6 +195,9 @@ class TranslationPruner
         return (bool) preg_match($regex, $key);
     }
 
+    /**
+     * @param  array<string, array<string, array<string, mixed>>>  $unusedKeys
+     */
     private function countEntries(array $unusedKeys): int
     {
         $count = 0;
@@ -176,5 +207,21 @@ class TranslationPruner
         }
 
         return $count;
+    }
+
+    /**
+     * @param  array<int, string>  $default
+     * @return array<int, string>
+     */
+    private function normalizeStringList(mixed $values, array $default): array
+    {
+        if (! is_array($values)) {
+            return $default;
+        }
+
+        return array_values(array_filter(
+            $values,
+            static fn ($value): bool => is_string($value) && $value !== ''
+        ));
     }
 }

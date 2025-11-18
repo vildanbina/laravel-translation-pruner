@@ -32,11 +32,18 @@ class UsageScanner
 
     public function __construct(ConfigRepository $config)
     {
+        /** @var array<string, mixed> $settings */
         $settings = (array) $config->get('translation-pruner', []);
 
         $this->scanners = $this->instantiateScanners($settings['scanners'] ?? null);
-        $this->excludeDirectories = $settings['ignore'] ?? ['vendor', 'node_modules', 'storage', 'bootstrap/cache'];
-        $this->filePatterns = $settings['file_patterns'] ?? ['*.php', '*.blade.php', '*.vue', '*.js', '*.ts', '*.jsx', '*.tsx'];
+        $this->excludeDirectories = $this->sanitizeStrings(
+            $settings['ignore'] ?? null,
+            ['vendor', 'node_modules', 'storage', 'bootstrap/cache']
+        );
+        $this->filePatterns = $this->sanitizeStrings(
+            $settings['file_patterns'] ?? null,
+            ['*.php', '*.blade.php', '*.vue', '*.js', '*.ts', '*.jsx', '*.tsx']
+        );
     }
 
     /**
@@ -114,17 +121,66 @@ class UsageScanner
     /**
      * @return array<int, ScannerInterface>
      */
-    private function instantiateScanners(?array $classes): array
+    private function instantiateScanners(mixed $classes): array
     {
-        if (empty($classes)) {
-            return [
-                new PhpScanner,
-                new BladeScanner,
-                new VueScanner,
-                new ReactScanner,
-            ];
+        $classList = $this->sanitizeScannerClasses($classes);
+
+        if (empty($classList)) {
+            return $this->defaultScanners();
         }
 
-        return array_map(static fn (string $scanner) => new $scanner, $classes);
+        return array_map(
+            static fn (string $class): ScannerInterface => new $class,
+            $classList
+        );
+    }
+
+    /**
+     * @return array<int, ScannerInterface>
+     */
+    private function defaultScanners(): array
+    {
+        return [
+            new PhpScanner,
+            new BladeScanner,
+            new VueScanner,
+            new ReactScanner,
+        ];
+    }
+
+    /**
+     * @return array<int, class-string<ScannerInterface>>
+     */
+    private function sanitizeScannerClasses(mixed $values): array
+    {
+        if (! is_array($values)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $values,
+            static fn ($value): bool => is_string($value)
+                && $value !== ''
+                && class_exists($value)
+                && is_subclass_of($value, ScannerInterface::class)
+        ));
+    }
+
+    /**
+     * @param  array<int, string>  $default
+     * @return array<int, string>
+     */
+    private function sanitizeStrings(mixed $values, array $default): array
+    {
+        if (! is_array($values)) {
+            return $default;
+        }
+
+        $filtered = array_values(array_filter(
+            $values,
+            static fn ($value): bool => is_string($value) && $value !== ''
+        ));
+
+        return $filtered === [] ? $default : $filtered;
     }
 }

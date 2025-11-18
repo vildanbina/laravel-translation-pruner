@@ -46,18 +46,21 @@ final class StaticSecondStubScanner implements ScannerInterface
 }
 
 beforeEach(function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $this->config = new BaseConfigRepository(['translation-pruner' => []]);
     $this->tempDir = sys_get_temp_dir().'/usage-scanner-test-'.uniqid();
     mkdir($this->tempDir, 0777, true);
 });
 
 afterEach(function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     if (isset($this->tempDir) && is_dir($this->tempDir)) {
         $files = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($this->tempDir, FilesystemIterator::SKIP_DOTS),
             RecursiveIteratorIterator::CHILD_FIRST
         );
 
+        /** @var SplFileInfo $file */
         foreach ($files as $file) {
             $file->isDir() ? rmdir($file->getRealPath()) : unlink($file->getRealPath());
         }
@@ -67,6 +70,7 @@ afterEach(function () {
 });
 
 it('returns unique translation keys from matching files', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $included = $this->tempDir.'/included';
     $excluded = $this->tempDir.'/excluded';
     mkdir($included);
@@ -91,6 +95,7 @@ it('returns unique translation keys from matching files', function () {
 });
 
 it('ignores non-existent directories', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $this->config->set('translation-pruner', [
         'scanners' => [ContentStubScanner::class],
         'file_patterns' => ['*.php'],
@@ -102,6 +107,7 @@ it('ignores non-existent directories', function () {
 });
 
 it('runs all scanners that support a file', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $file = $this->tempDir.'/shared.stub';
     file_put_contents($file, 'content');
 

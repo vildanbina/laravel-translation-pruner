@@ -9,6 +9,7 @@ use VildanBina\TranslationPruner\Loaders\PhpArrayLoader;
 use VildanBina\TranslationPruner\Services\TranslationRepository;
 
 beforeEach(function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $this->filesystem = new Filesystem();
     $this->langPath = sys_get_temp_dir().'/translation-repository-test-'.uniqid();
     $this->filesystem->makeDirectory($this->langPath, 0777, true, true);
@@ -27,12 +28,14 @@ beforeEach(function () {
 });
 
 afterEach(function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     if (isset($this->filesystem) && isset($this->langPath)) {
         $this->filesystem->deleteDirectory($this->langPath);
     }
 });
 
 it('loads json translations with metadata', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     file_put_contents($this->langPath.'/en.json', json_encode([
         'Welcome' => 'Welcome back',
     ]));
@@ -45,6 +48,7 @@ it('loads json translations with metadata', function () {
 });
 
 it('loads php translations including nested keys', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $this->filesystem->makeDirectory($this->langPath.'/en');
     file_put_contents($this->langPath.'/en/messages.php', <<<'PHP'
     <?php
@@ -66,6 +70,7 @@ it('loads php translations including nested keys', function () {
 });
 
 it('returns empty collection when lang path missing', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $missingConfig = new BaseConfigRepository([
         'translation-pruner' => [
             'lang_path' => $this->langPath.'/missing',

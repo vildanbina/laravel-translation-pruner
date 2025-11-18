@@ -5,12 +5,14 @@ declare(strict_types=1);
 use VildanBina\TranslationPruner\Loaders\PhpArrayLoader;
 
 beforeEach(function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $this->tempDir = sys_get_temp_dir().'/translation-pruner-test-'.uniqid();
     mkdir($this->tempDir, 0777, true);
     $this->testFile = $this->tempDir.'/test.php';
 });
 
 afterEach(function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     if (file_exists($this->testFile)) {
         unlink($this->testFile);
     }
@@ -20,6 +22,7 @@ afterEach(function () {
 });
 
 it('can handle php files', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
 
     expect($loader->canHandle('test.php'))->toBeTrue();
@@ -27,6 +30,7 @@ it('can handle php files', function () {
 });
 
 it('cannot handle non-php files', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
 
     expect($loader->canHandle('test.json'))->toBeFalse();
@@ -34,6 +38,7 @@ it('cannot handle non-php files', function () {
 });
 
 it('loads translations from php file', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     file_put_contents($this->testFile, "<?php\n\nreturn ['key' => 'value'];");
     $loader = new PhpArrayLoader();
 
@@ -43,6 +48,7 @@ it('loads translations from php file', function () {
 });
 
 it('returns empty array for non-existent file', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
 
     $translations = $loader->load('/non/existent/file.php');
@@ -51,6 +57,7 @@ it('returns empty array for non-existent file', function () {
 });
 
 it('saves translations with single quotes correctly', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = [
         'welcome' => "Hello 'world'",
@@ -66,6 +73,7 @@ it('saves translations with single quotes correctly', function () {
 });
 
 it('saves translations with backslashes correctly', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = [
         'path' => 'C:\Users\John\Documents',
@@ -81,6 +89,7 @@ it('saves translations with backslashes correctly', function () {
 });
 
 it('saves translations with both quotes and backslashes correctly', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = [
         'complex' => "It's in C:\Users\John's folder",
@@ -96,6 +105,7 @@ it('saves translations with both quotes and backslashes correctly', function () 
 });
 
 it('saves translations with special characters correctly', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = [
         'newline' => "Line 1\nLine 2",
@@ -112,6 +122,7 @@ it('saves translations with special characters correctly', function () {
 });
 
 it('saves translations with different types correctly', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = [
         'string' => 'text',
@@ -130,6 +141,7 @@ it('saves translations with different types correctly', function () {
 });
 
 it('saves nested arrays correctly', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = [
         'messages' => [
@@ -149,6 +161,7 @@ it('saves nested arrays correctly', function () {
 });
 
 it('saves empty array correctly', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = [];
 
@@ -160,6 +173,7 @@ it('saves empty array correctly', function () {
 });
 
 it('removes translation key correctly', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = [
         'key1' => 'value1',
@@ -176,6 +190,7 @@ it('removes translation key correctly', function () {
 });
 
 it('deletes file when removing last translation', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = ['key1' => 'value1'];
 
@@ -186,6 +201,7 @@ it('deletes file when removing last translation', function () {
 });
 
 it('returns false when removing non-existent key', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = ['key1' => 'value1'];
 
@@ -196,6 +212,7 @@ it('returns false when removing non-existent key', function () {
 });
 
 it('removes nested translation keys', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();
     $translations = [
         'nested' => [

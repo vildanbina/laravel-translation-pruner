@@ -24,10 +24,13 @@ class TranslationRepository
         ConfigRepository $config,
         protected Filesystem $filesystem,
     ) {
+        /** @var array<string, mixed> $settings */
         $settings = (array) $config->get('translation-pruner', []);
 
         $this->loaders = $this->instantiateLoaders($settings['loaders'] ?? null);
-        $this->langPath = $settings['lang_path'] ?? $this->defaultLangPath();
+        $this->langPath = is_string($settings['lang_path'] ?? null)
+            ? $settings['lang_path']
+            : $this->defaultLangPath();
     }
 
     /**
@@ -35,6 +38,7 @@ class TranslationRepository
      */
     public function all(): array
     {
+        /** @var array<string, array<string, array<string, mixed>>> $available */
         $available = [];
 
         if (! $this->filesystem->isDirectory($this->langPath)) {
@@ -42,10 +46,18 @@ class TranslationRepository
         }
 
         foreach ($this->filesystem->glob($this->langPath.'/*.json') ?: [] as $file) {
+            if (! is_string($file)) {
+                continue;
+            }
+
             $this->hydrateJsonTranslations($available, $file);
         }
 
         foreach ($this->filesystem->directories($this->langPath) as $localeDirectory) {
+            if (! is_string($localeDirectory)) {
+                continue;
+            }
+
             $this->hydratePhpTranslations($available, $localeDirectory);
         }
 
@@ -85,7 +97,9 @@ class TranslationRepository
         $translations = $loader->load($file);
 
         foreach ($translations as $key => $value) {
-            $available[$key][$locale] = [
+            $normalizedKey = (string) $key;
+
+            $available[$normalizedKey][$locale] = [
                 'file' => $file,
                 'group' => null,
                 'locale' => $locale,
@@ -102,6 +116,10 @@ class TranslationRepository
         $locale = basename($localeDirectory);
 
         foreach ($this->filesystem->glob($localeDirectory.'/*.php') ?: [] as $file) {
+            if (! is_string($file)) {
+                continue;
+            }
+
             $loader = $this->getLoaderFor($file);
 
             if (! $loader) {
@@ -110,13 +128,12 @@ class TranslationRepository
 
             $translations = $loader->load($file);
 
-            if (! is_array($translations)) {
-                continue;
-            }
-
             $group = basename($file, '.php');
 
-            foreach (Arr::dot($translations) as $key => $value) {
+            /** @var array<string, mixed> $flattened */
+            $flattened = Arr::dot($translations);
+
+            foreach ($flattened as $key => $value) {
                 $fullKey = sprintf('%s.%s', $group, $key);
 
                 $available[$fullKey][$locale] = [
@@ -136,21 +153,50 @@ class TranslationRepository
             return base_path('lang');
         }
 
-        return getcwd().'/lang';
+        $cwd = getcwd();
+
+        if ($cwd === false) {
+            return 'lang';
+        }
+
+        return $cwd.'/lang';
     }
 
     /**
      * @return array<int, LoaderInterface>
      */
-    private function instantiateLoaders(?array $classes): array
+    private function instantiateLoaders(mixed $classes): array
     {
-        if (empty($classes)) {
-            return [
-                new JsonLoader,
-                new PhpArrayLoader,
-            ];
+        if (! is_array($classes) || empty($classes)) {
+            return $this->defaultLoaders();
         }
 
-        return array_map(static fn (string $loader) => new $loader, $classes);
+        $validClasses = array_values(array_filter(
+            $classes,
+            static fn ($class): bool => is_string($class)
+                && $class !== ''
+                && class_exists($class)
+                && is_subclass_of($class, LoaderInterface::class)
+        ));
+
+        if (empty($validClasses)) {
+            return $this->defaultLoaders();
+        }
+
+        return array_map(
+            static fn (string $class): LoaderInterface => new $class,
+            $validClasses
+        );
+    }
+
+    /**
+     * @return array<int, LoaderInterface>
+     */
+    private function defaultLoaders(): array
+    {
+        return [
+            new JsonLoader,
+            new PhpArrayLoader,
+        ];
     }
 }

@@ -13,6 +13,9 @@ class JsonLoader implements LoaderInterface
         return pathinfo($file, PATHINFO_EXTENSION) === 'json';
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function load(string $file): array
     {
         if (! file_exists($file)) {
@@ -20,9 +23,18 @@ class JsonLoader implements LoaderInterface
         }
 
         $content = file_get_contents($file);
+        if ($content === false) {
+            return [];
+        }
+
         $translations = json_decode($content, true);
 
-        return is_array($translations) ? $translations : [];
+        if (! is_array($translations)) {
+            return [];
+        }
+
+        /** @var array<string, mixed> $translations */
+        return $translations;
     }
 
     public function remove(string $file, string $key, ?string $group = null): bool
@@ -42,9 +54,16 @@ class JsonLoader implements LoaderInterface
         return $this->save($file, $translations);
     }
 
+    /**
+     * @param  array<int|string, mixed>  $translations
+     */
     public function save(string $file, array $translations): bool
     {
         $content = json_encode($translations, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+        if ($content === false) {
+            return false;
+        }
 
         return file_put_contents($file, $content) !== false;
     }

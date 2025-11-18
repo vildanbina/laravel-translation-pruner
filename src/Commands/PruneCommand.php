@@ -30,6 +30,13 @@ class PruneCommand extends Command
         $this->info('Finding unused translations...');
 
         $paths = $this->resolvePathsOption();
+        /** @var array{
+         *     total:int,
+         *     used:int,
+         *     unused:int,
+         *     unused_keys: array<string, array<string, array<string, mixed>>>
+         * } $results
+         */
         $results = $pruner->scan($paths);
 
         if (empty($results['unused_keys'])) {
@@ -64,18 +71,45 @@ class PruneCommand extends Command
      */
     private function resolvePathsOption(): array
     {
-        $paths = array_filter((array) $this->option('path'));
+        $rawPaths = $this->option('path');
+        $rawValues = is_array($rawPaths)
+            ? $rawPaths
+            : (is_string($rawPaths) && $rawPaths !== '' ? [$rawPaths] : []);
+
+        /** @var array<int, string> $paths */
+        $paths = array_values(array_filter(
+            $rawValues,
+            static fn ($path): bool => is_string($path) && $path !== ''
+        ));
 
         if (! empty($paths)) {
             return $paths;
         }
 
-        return $this->repository->get('translation-pruner.paths', []);
+        $configured = $this->repository->get('translation-pruner.paths', []);
+
+        if (! is_array($configured)) {
+            return [];
+        }
+
+        /** @var array<int, string> $configuredPaths */
+        $configuredPaths = array_values(array_filter(
+            $configured,
+            static fn ($path): bool => is_string($path) && $path !== ''
+        ));
+
+        return $configuredPaths;
     }
 
+    /**
+     * @param  array<string, array<string, array<string, mixed>>>  $unusedKeys
+     */
     private function displayUnusedSummary(array $unusedKeys): void
     {
-        $totalEntries = array_sum(array_map('count', $unusedKeys));
+        $totalEntries = array_sum(array_map(
+            static fn (array $locales): int => count($locales),
+            $unusedKeys
+        ));
         $this->info("Found {$totalEntries} unused translation entries:");
 
         foreach ($unusedKeys as $key => $locales) {

@@ -15,6 +15,9 @@ class PhpArrayLoader implements LoaderInterface
         return pathinfo($file, PATHINFO_EXTENSION) === 'php';
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
     public function load(string $file): array
     {
         if (! file_exists($file)) {
@@ -23,7 +26,12 @@ class PhpArrayLoader implements LoaderInterface
 
         $translations = include $file;
 
-        return is_array($translations) ? $translations : [];
+        if (! is_array($translations)) {
+            return [];
+        }
+
+        /** @var array<string, mixed> $translations */
+        return $translations;
     }
 
     public function remove(string $file, string $fullKey, ?string $group = null): bool
@@ -51,6 +59,9 @@ class PhpArrayLoader implements LoaderInterface
         return $this->save($file, $translations);
     }
 
+    /**
+     * @param  array<int|string, mixed>  $translations
+     */
     public function save(string $file, array $translations): bool
     {
         $content = "<?php\n\nreturn ".$this->formatArray($translations).";\n";
@@ -58,6 +69,9 @@ class PhpArrayLoader implements LoaderInterface
         return file_put_contents($file, $content) !== false;
     }
 
+    /**
+     * @param  array<int|string, mixed>  $array
+     */
     private function formatArray(array $array, int $depth = 0): string
     {
         if (empty($array)) {
@@ -96,6 +110,10 @@ class PhpArrayLoader implements LoaderInterface
         return var_export($value, true);
     }
 
+    /**
+     * @param  array<int|string, mixed>  $translations
+     * @return array<int|string, mixed>
+     */
     private function pruneEmptyBranches(array $translations): array
     {
         foreach ($translations as $key => $value) {

@@ -5,23 +5,13 @@ declare(strict_types=1);
 use VildanBina\TranslationPruner\TranslationPruner;
 
 beforeEach(function () {
-    // Create test lang directory
-    $langPath = lang_path();
-    if (! is_dir($langPath)) {
-        mkdir($langPath, 0755, true);
-    }
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
+    useTemporaryLangPath($this);
 });
 
 afterEach(function () {
-    // Clean up test lang directory
-    $langPath = lang_path();
-    if (is_dir($langPath)) {
-        array_map('unlink', glob("{$langPath}/*.json") ?: []);
-        foreach (glob("{$langPath}/*", GLOB_ONLYDIR) ?: [] as $dir) {
-            array_map('unlink', glob("{$dir}/*.php") ?: []);
-            rmdir($dir);
-        }
-    }
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
+    restoreTemporaryLangPath($this);
 });
 
 it('can scan for translations', function () {

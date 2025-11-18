@@ -4,11 +4,30 @@ declare(strict_types=1);
 
 namespace VildanBina\TranslationPruner\Tests;
 
+use Illuminate\Config\Repository as BaseConfigRepository;
+use Illuminate\Filesystem\Filesystem;
 use Orchestra\Testbench\TestCase as Orchestra;
+use VildanBina\TranslationPruner\Services\TranslationRepository;
 use VildanBina\TranslationPruner\TranslationPrunerServiceProvider;
 
 class TestCase extends Orchestra
 {
+    public string $tempDir = '';
+
+    public string $testFile = '';
+
+    public Filesystem $filesystem;
+
+    public string $langPath = '';
+
+    public BaseConfigRepository $config;
+
+    public TranslationRepository $repository;
+
+    public string $tempLangPath = '';
+
+    public string $originalLangPath = '';
+
     protected function getPackageProviders($app): array
     {
         return [

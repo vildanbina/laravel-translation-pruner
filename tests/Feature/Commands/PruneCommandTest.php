@@ -2,34 +2,24 @@
 
 declare(strict_types=1);
 
-use function Pest\Laravel\artisan;
-
 beforeEach(function () {
-    $langPath = lang_path();
-    if (! is_dir($langPath)) {
-        mkdir($langPath, 0755, true);
-    }
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
+    useTemporaryLangPath($this);
 });
 
 afterEach(function () {
-    $langPath = lang_path();
-    if (is_dir($langPath)) {
-        array_map('unlink', glob("{$langPath}/*.json") ?: []);
-        foreach (glob("{$langPath}/*", GLOB_ONLYDIR) ?: [] as $dir) {
-            array_map('unlink', glob("{$dir}/*.php") ?: []);
-            rmdir($dir);
-        }
-    }
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
+    restoreTemporaryLangPath($this);
 });
 
 it('can run prune command', function () {
-    artisan('translation:prune')
+    runArtisan('translation:prune')
         ->expectsOutput('Finding unused translations...')
         ->assertSuccessful();
 });
 
 it('shows no unused translations message', function () {
-    artisan('translation:prune')
+    runArtisan('translation:prune')
         ->expectsOutput('✅ No unused translations to remove!')
         ->assertSuccessful();
 });
@@ -48,7 +38,7 @@ it('runs in dry run mode with --dry-run flag', function () {
 
     config()->set('translation-pruner.paths', [$testDir]);
 
-    artisan('translation:prune', ['--dry-run' => true])
+    runArtisan('translation:prune', ['--dry-run' => true])
         ->expectsOutputToContain('🔍 DRY RUN MODE')
         ->assertSuccessful();
 
@@ -69,7 +59,7 @@ it('asks for confirmation before deleting', function () {
     }
     file_put_contents($enDir.'/messages.php', "<?php\n\nreturn ['unused' => 'Not used'];");
 
-    artisan('translation:prune')
+    runArtisan('translation:prune')
         ->expectsConfirmation('Delete these unused translations?', 'no')
         ->expectsOutput('Operation cancelled.')
         ->assertSuccessful();
@@ -83,7 +73,7 @@ it('lists unused translations before pruning', function () {
     }
     file_put_contents($enDir.'/messages.php', "<?php\n\nreturn ['unused' => 'Not used'];");
 
-    artisan('translation:prune')
+    runArtisan('translation:prune')
         ->expectsOutputToContain('Found 1 unused translation entries:')
         ->expectsOutputToContain('• messages.unused (en)')
         ->expectsConfirmation('Delete these unused translations?', 'no')
@@ -104,7 +94,7 @@ it('can delete translations with force flag', function () {
 
     config()->set('translation-pruner.paths', [$testDir]);
 
-    artisan('translation:prune', ['--force' => true])
+    runArtisan('translation:prune', ['--force' => true])
         ->expectsOutputToContain('✅ Deleted 1 unused translation entries')
         ->assertSuccessful();
 
@@ -136,7 +126,7 @@ it('honors custom path options', function () {
 
     config()->set('translation-pruner.paths', [$configDir]);
 
-    artisan('translation:prune', ['--path' => [$isolatedDir]])
+    runArtisan('translation:prune', ['--path' => [$isolatedDir]])
         ->expectsOutputToContain('messages.special')
         ->expectsConfirmation('Delete these unused translations?', 'no')
         ->assertSuccessful();
@@ -147,7 +137,7 @@ it('honors custom path options', function () {
     rmdir($isolatedDir);
 
     config()->set('translation-pruner.paths', [
-        $this->getTestPath('app'),
-        $this->getTestPath('resources'),
+        fixturesPath('app'),
+        fixturesPath('resources'),
     ]);
 });
