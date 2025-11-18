@@ -27,7 +27,7 @@ class TranslationRepository
         /** @var array<string, mixed> $settings */
         $settings = (array) $config->get('translation-pruner', []);
 
-        $this->loaders = $this->instantiateLoaders($settings['loaders'] ?? null);
+        $this->loaders = $this->instantiateLoaders($settings);
         $this->langPath = is_string($settings['lang_path'] ?? null)
             ? $settings['lang_path']
             : $this->defaultLangPath();
@@ -80,6 +80,16 @@ class TranslationRepository
     public function getLangPath(): string
     {
         return $this->langPath;
+    }
+
+    protected function resolveBaseLangPath(): ?string
+    {
+        return function_exists('base_path') ? base_path('lang') : null;
+    }
+
+    protected function resolveWorkingDirectory(): string|false|null
+    {
+        return getcwd();
     }
 
     /**
@@ -149,13 +159,15 @@ class TranslationRepository
 
     private function defaultLangPath(): string
     {
-        if (function_exists('base_path')) {
-            return base_path('lang');
+        $basePath = $this->resolveBaseLangPath();
+
+        if (is_string($basePath) && $basePath !== '') {
+            return $basePath;
         }
 
-        $cwd = getcwd();
+        $cwd = $this->resolveWorkingDirectory();
 
-        if ($cwd === false) {
+        if (! is_string($cwd) || $cwd === '') {
             return 'lang';
         }
 
@@ -163,10 +175,13 @@ class TranslationRepository
     }
 
     /**
+     * @param  array<string, mixed>  $settings
      * @return array<int, LoaderInterface>
      */
-    private function instantiateLoaders(mixed $classes): array
+    private function instantiateLoaders(array $settings): array
     {
+        $classes = $settings['loaders'] ?? null;
+
         if (! is_array($classes) || empty($classes)) {
             return $this->defaultLoaders();
         }

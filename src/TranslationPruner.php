@@ -109,6 +109,19 @@ class TranslationPruner
     }
 
     /**
+     * @return array<int, string>|string|null
+     */
+    protected function resolveCustomFallbackPaths(): array|string|null
+    {
+        return null;
+    }
+
+    protected function resolveBasePathRoot(): ?string
+    {
+        return function_exists('base_path') ? base_path() : null;
+    }
+
+    /**
      * @param  array<int, string>  $paths
      * @return array<int, string>
      */
@@ -145,14 +158,37 @@ class TranslationPruner
      */
     private function fallbackPaths(): array
     {
-        if (! function_exists('base_path')) {
+        $paths = $this->resolveCustomFallbackPaths();
+
+        if ($paths !== null) {
+            return $this->sanitizeFallbackPaths($paths);
+        }
+
+        $basePath = $this->resolveBasePathRoot();
+
+        if ($basePath === null || $basePath === '') {
             return [];
         }
 
-        return array_filter([
-            base_path('app'),
-            base_path('resources'),
-        ], static fn ($path) => is_dir($path));
+        return $this->sanitizeFallbackPaths([
+            $basePath.'/app',
+            $basePath.'/resources',
+        ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function sanitizeFallbackPaths(mixed $paths): array
+    {
+        if (! is_array($paths)) {
+            $paths = is_string($paths) && $paths !== '' ? [$paths] : [];
+        }
+
+        return array_values(array_filter(
+            $paths,
+            static fn ($path): bool => is_string($path) && $path !== ''
+        ));
     }
 
     private function removeKeyFromFile(string $file, string $key, ?string $group): bool

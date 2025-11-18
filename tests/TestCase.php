@@ -18,6 +18,9 @@ use VildanBina\TranslationPruner\TranslationPrunerServiceProvider;
  * @property string $langPath
  * @property BaseConfigRepository $config
  * @property TranslationRepository $repository
+ * @property string $tempJson
+ * @property string $tempLangPath
+ * @property string $originalLangPath
  */
 #[AllowDynamicProperties]
 class TestCase extends Orchestra

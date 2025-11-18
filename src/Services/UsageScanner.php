@@ -61,7 +61,7 @@ class UsageScanner
         $keys = [];
 
         try {
-            $finder = (new Finder)
+            $finder = $this->makeFinder()
                 ->files()
                 ->in($paths)
                 ->ignoreUnreadableDirs();
@@ -94,6 +94,11 @@ class UsageScanner
         }
 
         return array_keys($keys);
+    }
+
+    protected function makeFinder(): Finder
+    {
+        return new Finder;
     }
 
     /**

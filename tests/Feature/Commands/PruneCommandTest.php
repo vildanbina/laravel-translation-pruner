@@ -2,24 +2,26 @@
 
 declare(strict_types=1);
 
+use VildanBina\TranslationPruner\Tests\Support\TestHelpers as Helpers;
+
 beforeEach(function () {
     /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
-    useTemporaryLangPath($this);
+    Helpers::useTemporaryLangPath($this);
 });
 
 afterEach(function () {
     /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
-    restoreTemporaryLangPath($this);
+    Helpers::restoreTemporaryLangPath($this);
 });
 
 it('can run prune command', function () {
-    runArtisan('translation:prune')
+    Helpers::runArtisan('translation:prune')
         ->expectsOutput('Finding unused translations...')
         ->assertSuccessful();
 });
 
 it('shows no unused translations message', function () {
-    runArtisan('translation:prune')
+    Helpers::runArtisan('translation:prune')
         ->expectsOutput('✅ No unused translations to remove!')
         ->assertSuccessful();
 });
@@ -38,7 +40,7 @@ it('runs in dry run mode with --dry-run flag', function () {
 
     config()->set('translation-pruner.paths', [$testDir]);
 
-    runArtisan('translation:prune', ['--dry-run' => true])
+    Helpers::runArtisan('translation:prune', ['--dry-run' => true])
         ->expectsOutputToContain('🔍 DRY RUN MODE')
         ->assertSuccessful();
 
@@ -59,7 +61,7 @@ it('asks for confirmation before deleting', function () {
     }
     file_put_contents($enDir.'/messages.php', "<?php\n\nreturn ['unused' => 'Not used'];");
 
-    runArtisan('translation:prune')
+    Helpers::runArtisan('translation:prune')
         ->expectsConfirmation('Delete these unused translations?', 'no')
         ->expectsOutput('Operation cancelled.')
         ->assertSuccessful();
@@ -73,7 +75,7 @@ it('lists unused translations before pruning', function () {
     }
     file_put_contents($enDir.'/messages.php', "<?php\n\nreturn ['unused' => 'Not used'];");
 
-    runArtisan('translation:prune')
+    Helpers::runArtisan('translation:prune')
         ->expectsOutputToContain('Found 1 unused translation entries:')
         ->expectsOutputToContain('• messages.unused (en)')
         ->expectsConfirmation('Delete these unused translations?', 'no')
@@ -94,7 +96,7 @@ it('can delete translations with force flag', function () {
 
     config()->set('translation-pruner.paths', [$testDir]);
 
-    runArtisan('translation:prune', ['--force' => true])
+    Helpers::runArtisan('translation:prune', ['--force' => true])
         ->expectsOutputToContain('✅ Deleted 1 unused translation entries')
         ->assertSuccessful();
 
@@ -126,7 +128,7 @@ it('honors custom path options', function () {
 
     config()->set('translation-pruner.paths', [$configDir]);
 
-    runArtisan('translation:prune', ['--path' => [$isolatedDir]])
+    Helpers::runArtisan('translation:prune', ['--path' => [$isolatedDir]])
         ->expectsOutputToContain('messages.special')
         ->expectsConfirmation('Delete these unused translations?', 'no')
         ->assertSuccessful();
@@ -137,7 +139,37 @@ it('honors custom path options', function () {
     rmdir($isolatedDir);
 
     config()->set('translation-pruner.paths', [
-        fixturesPath('app'),
-        fixturesPath('resources'),
+        Helpers::fixturesPath('app'),
+        Helpers::fixturesPath('resources'),
     ]);
+});
+
+it('accepts single string path option and invalid configured paths', function () {
+    $enDir = lang_path('en');
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn ['unused' => 'value'];");
+
+    $tempPath = sys_get_temp_dir().'/translation-pruner-custom-'.uniqid();
+    mkdir($tempPath, 0755, true);
+    file_put_contents($tempPath.'/usage.php', "<?php echo 'noop';");
+
+    config()->set('translation-pruner.paths', 'not-an-array');
+
+    Helpers::runArtisan('translation:prune', ['--path' => $tempPath])
+        ->expectsConfirmation('Delete these unused translations?', 'no')
+        ->assertSuccessful();
+
+    unlink($tempPath.'/usage.php');
+    rmdir($tempPath);
+});
+
+it('runs with invalid configured paths when no option is provided', function () {
+    config()->set('translation-pruner.paths', 'invalid');
+
+    Helpers::runArtisan('translation:prune')
+        ->expectsOutput('✅ No unused translations to remove!')
+        ->assertSuccessful();
 });

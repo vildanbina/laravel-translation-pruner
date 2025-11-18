@@ -56,6 +56,14 @@ it('returns empty array for non-existent file', function () {
     expect($translations)->toBe([]);
 });
 
+it('returns empty array for invalid php file contents', function () {
+    /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
+    file_put_contents($this->testFile, "<?php return 'string';");
+    $loader = new PhpArrayLoader();
+
+    expect($loader->load($this->testFile))->toBe([]);
+});
+
 it('saves translations with single quotes correctly', function () {
     /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $loader = new PhpArrayLoader();

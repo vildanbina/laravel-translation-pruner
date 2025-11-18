@@ -2,16 +2,20 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use VildanBina\TranslationPruner\Services\TranslationRepository;
+use VildanBina\TranslationPruner\Services\UsageScanner;
+use VildanBina\TranslationPruner\Tests\Support\TestHelpers as Helpers;
 use VildanBina\TranslationPruner\TranslationPruner;
 
 beforeEach(function () {
     /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
-    useTemporaryLangPath($this);
+    Helpers::useTemporaryLangPath($this);
 });
 
 afterEach(function () {
     /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
-    restoreTemporaryLangPath($this);
+    Helpers::restoreTemporaryLangPath($this);
 });
 
 it('can scan for translations', function () {
@@ -177,6 +181,34 @@ it('respects exclusion patterns', function () {
     rmdir($testDir);
 });
 
+it('falls back to default paths and exclusions when configuration is invalid', function () {
+    config()->set('translation-pruner.paths', 'invalid');
+    config()->set('translation-pruner.exclude', 'invalid');
+
+    $fallbackJson = lang_path('fallback.json');
+    file_put_contents($fallbackJson, json_encode(['fallback_key' => 'value']));
+
+    $pruner = app(TranslationPruner::class);
+    $result = $pruner->scan();
+
+    expect($result['total'])->toBeGreaterThan(0)
+        ->and(array_key_exists('fallback_key', $result['unused_keys']))->toBeTrue();
+
+    unlink($fallbackJson);
+});
+
+it('skips invalid metadata during prune operations', function () {
+    $pruner = app(TranslationPruner::class);
+
+    $deleted = $pruner->prune([
+        'messages.invalid' => [
+            'en' => ['file' => null],
+        ],
+    ], dryRun: false);
+
+    expect($deleted)->toBe(0);
+});
+
 it('can prune translations in dry run mode', function () {
     // Create translation file
     $enDir = lang_path('en');
@@ -258,3 +290,193 @@ it('removes nested translations completely', function () {
     unlink($testDir.'/noop.php');
     rmdir($testDir);
 });
+
+it('falls back to the original key when key path metadata is missing', function () {
+    $enDir = lang_path('en');
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+
+    $file = $enDir.'/messages.php';
+    file_put_contents($file, "<?php\n\nreturn ['orphan' => 'value'];");
+
+    $pruner = app(TranslationPruner::class);
+
+    $deleted = $pruner->prune([
+        'messages.orphan' => [
+            'en' => [
+                'file' => $file,
+                'group' => 'messages',
+                'value' => 'value',
+            ],
+        ],
+    ], dryRun: false);
+
+    expect($deleted)->toBe(1)
+        ->and(file_exists($file))->toBeFalse();
+});
+
+it('uses configured paths when scanning without explicit arguments', function () {
+    $scanDir = sys_get_temp_dir().'/translation-pruner-configured-'.uniqid();
+    mkdir($scanDir, 0755, true);
+    file_put_contents($scanDir.'/usage.php', "<?php echo __('messages.used');");
+
+    $enDir = lang_path('en');
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn [\n    'used' => 'Used',\n    'orphan' => 'Unused',\n];");
+
+    $originalPaths = config('translation-pruner.paths');
+    $originalExclude = config('translation-pruner.exclude');
+
+    config()->set('translation-pruner.paths', [$scanDir]);
+    config()->set('translation-pruner.exclude', []);
+
+    $pruner = app(TranslationPruner::class);
+    $result = $pruner->scan();
+
+    expect($result['unused'])->toBe(1)
+        ->and($result['unused_keys'])->toHaveKey('messages.orphan')
+        ->and($result['unused_keys'])->not->toHaveKey('messages.used');
+
+    unlink($scanDir.'/usage.php');
+    rmdir($scanDir);
+    unlink($enDir.'/messages.php');
+
+    config()->set('translation-pruner.paths', $originalPaths);
+    config()->set('translation-pruner.exclude', $originalExclude);
+});
+
+it('skips removal attempts when no loader can handle the target file', function () {
+    $enDir = lang_path('en');
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+
+    $pruner = app(TranslationPruner::class);
+
+    $deleted = $pruner->prune([
+        'messages.ghost' => [
+            'en' => [
+                'file' => $enDir.'/ghost.txt',
+                'group' => 'messages',
+                'key_path' => 'ghost',
+            ],
+        ],
+    ], dryRun: false);
+
+    expect($deleted)->toBe(0);
+});
+
+it('uses injected fallback paths when configuration and inputs are empty', function () {
+    $scanDir = sys_get_temp_dir().'/translation-pruner-fallback-'.uniqid();
+    mkdir($scanDir, 0755, true);
+    file_put_contents($scanDir.'/usage.php', "<?php echo __('messages.used');");
+
+    $enDir = lang_path('en');
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn [\n    'used' => 'Used',\n    'orphan' => 'Unused',\n];");
+
+    $fallbackOriginalPaths = config('translation-pruner.paths');
+    $fallbackOriginalExclude = config('translation-pruner.exclude');
+
+    config()->set('translation-pruner.paths', []);
+    config()->set('translation-pruner.exclude', []);
+
+    $pruner = new TestableTranslationPruner(
+        config(),
+        app(TranslationRepository::class),
+        app(UsageScanner::class),
+        fallbackOverride: static fn () => $scanDir,
+    );
+
+    $result = $pruner->scan();
+
+    expect($result['unused_keys'])->toHaveKey('messages.orphan')
+        ->and($result['unused_keys'])->not->toHaveKey('messages.used');
+
+    unlink($scanDir.'/usage.php');
+    rmdir($scanDir);
+    unlink($enDir.'/messages.php');
+
+    config()->set('translation-pruner.paths', $fallbackOriginalPaths);
+    config()->set('translation-pruner.exclude', $fallbackOriginalExclude);
+});
+
+it('returns no fallback paths when base path resolver fails', function () {
+    $enDir = lang_path('en');
+    if (! is_dir($enDir)) {
+        mkdir($enDir, 0755, true);
+    }
+
+    file_put_contents($enDir.'/messages.php', "<?php\n\nreturn ['nullBase' => 'value'];");
+
+    $originalPaths = config('translation-pruner.paths');
+    config()->set('translation-pruner.paths', []);
+
+    $pruner = new TestableTranslationPruner(
+        config(),
+        app(TranslationRepository::class),
+        app(UsageScanner::class),
+        baseOverride: static fn () => null,
+    );
+
+    $result = $pruner->scan();
+
+    expect($result['unused_keys'])->toHaveKey('messages.nullBase');
+
+    unlink($enDir.'/messages.php');
+    config()->set('translation-pruner.paths', $originalPaths);
+});
+
+final class TestableTranslationPruner extends TranslationPruner
+{
+    /**
+     * @var (Closure(): (array<int, string>|string|null))|null
+     */
+    private ?Closure $fallbackOverride;
+
+    /**
+     * @var (Closure(): (?string))|null
+     */
+    private ?Closure $baseOverride;
+
+    public function __construct(
+        ConfigRepository $config,
+        TranslationRepository $repository,
+        UsageScanner $usageScanner,
+        ?Closure $fallbackOverride = null,
+        ?Closure $baseOverride = null,
+    ) {
+        $this->fallbackOverride = $fallbackOverride;
+        $this->baseOverride = $baseOverride;
+
+        parent::__construct($config, $repository, $usageScanner);
+    }
+
+    /**
+     * @return array<int, string>|string|null
+     */
+    protected function resolveCustomFallbackPaths(): array|string|null
+    {
+        if ($this->fallbackOverride !== null) {
+            return ($this->fallbackOverride)();
+        }
+
+        return parent::resolveCustomFallbackPaths();
+    }
+
+    protected function resolveBasePathRoot(): ?string
+    {
+        if ($this->baseOverride !== null) {
+            return ($this->baseOverride)();
+        }
+
+        return parent::resolveBasePathRoot();
+    }
+}
