@@ -6,6 +6,7 @@ namespace VildanBina\TranslationPruner\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Support\Arr;
 use VildanBina\TranslationPruner\TranslationPruner;
 
 class PruneCommand extends Command
@@ -71,14 +72,12 @@ class PruneCommand extends Command
      */
     private function resolvePathsOption(): array
     {
+        /** @var mixed $rawPaths */
         $rawPaths = $this->option('path');
-        $rawValues = is_array($rawPaths)
-            ? $rawPaths
-            : (is_string($rawPaths) && $rawPaths !== '' ? [$rawPaths] : []);
 
         /** @var array<int, string> $paths */
         $paths = array_values(array_filter(
-            $rawValues,
+            Arr::wrap($rawPaths),
             static fn ($path): bool => is_string($path) && $path !== ''
         ));
 
