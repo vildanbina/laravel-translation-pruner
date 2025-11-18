@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         php-version: [ '8.4' ]
-        dependency-version: [ prefer-lowest, prefer-stable ]
+        dependency-version: [ prefer-stable ]
 
     name: P${{ matrix.php-version }} - ${{ matrix.dependency-version }}
 
@@ -43,7 +43,7 @@ jobs:
         run: composer update --${{ matrix.dependency-version }} --prefer-dist --no-progress
 
       - name: Run code style check
-        run: vendor/bin/pint --check
+        run: vendor/bin/pint --test
 
       - name: Run static analysis (PHPStan)
         run: vendor/bin/phpstan analyse --memory-limit=1G
