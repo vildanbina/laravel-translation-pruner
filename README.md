@@ -4,7 +4,7 @@
 [![Total Downloads](https://poser.pugx.org/vildanbina/laravel-translation-pruner/downloads)](https://packagist.org/packages/vildanbina/laravel-translation-pruner)
 [![License](https://poser.pugx.org/vildanbina/laravel-translation-pruner/license)](https://packagist.org/packages/vildanbina/laravel-translation-pruner)
 [![PHP Version Require](https://poser.pugx.org/vildanbina/laravel-translation-pruner/require/php)](https://packagist.org/packages/vildanbina/laravel-translation-pruner)
-[![GitHub Workflow Status (main)](https://img.shields.io/github/actions/workflow/status/vildanbina/laravel-translation-pruner/ci.yml?label=Tests)]
+![GitHub Workflow Status (main)](https://img.shields.io/github/actions/workflow/status/vildanbina/laravel-translation-pruner/ci.yml?label=Tests)
 
 A simple Laravel package to find and remove unused translations from your codebase.
 

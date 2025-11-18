@@ -9,9 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    name: P${{ matrix.php-version }} - ${{ matrix.dependency-version }}
-
     steps:
       - uses: actions/checkout@v4
 
