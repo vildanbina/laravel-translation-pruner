@@ -21,6 +21,7 @@ class VueScanner implements ScannerInterface
 
         // Vue/JS translation patterns
         $patterns = [
+            '/trans\([\'"]([^\'"]+)[\'"]/',
             '/\$t\([\'"]([^\'"]+)[\'"]/',
             '/i18n\.t\([\'"]([^\'"]+)[\'"]/',
             '/v-t=[\'"]([^\'"]+)[\'"]/',
