@@ -225,10 +225,20 @@ Delete these unused translations? (yes/no) [no]:
 ✅ Deleted 58 unused translation entries
 ```
 
+
 ## Contributing
 
-Feel free to submit issues and pull requests.
+See [CONTRIBUTING](.github/CONTRIBUTING.md) for details.
+
+## Security Vulnerabilities
+
+Please e-mail vildanbina@gmail.com to report any security vulnerabilities instead of using the issue tracker.
+
+## Credits
+
+- [Vildan Bina](https://github.com/vildanbina)
+- [All Contributors](../../contributors)
 
 ## License
 
-MIT
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
