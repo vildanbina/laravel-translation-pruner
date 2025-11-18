@@ -10,11 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        php-version: [ '8.4' ]
-        dependency-version: [ prefer-stable ]
-
     name: P${{ matrix.php-version }} - ${{ matrix.dependency-version }}
 
     steps:
