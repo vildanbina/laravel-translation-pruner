@@ -4,30 +4,24 @@ declare(strict_types=1);
 
 namespace VildanBina\TranslationPruner\Tests;
 
+use AllowDynamicProperties;
 use Illuminate\Config\Repository as BaseConfigRepository;
 use Illuminate\Filesystem\Filesystem;
 use Orchestra\Testbench\TestCase as Orchestra;
 use VildanBina\TranslationPruner\Services\TranslationRepository;
 use VildanBina\TranslationPruner\TranslationPrunerServiceProvider;
 
+/**
+ * @property string $tempDir
+ * @property string $testFile
+ * @property Filesystem $filesystem
+ * @property string $langPath
+ * @property BaseConfigRepository $config
+ * @property TranslationRepository $repository
+ */
+#[AllowDynamicProperties]
 class TestCase extends Orchestra
 {
-    public string $tempDir = '';
-
-    public string $testFile = '';
-
-    public Filesystem $filesystem;
-
-    public string $langPath = '';
-
-    public BaseConfigRepository $config;
-
-    public TranslationRepository $repository;
-
-    public string $tempLangPath = '';
-
-    public string $originalLangPath = '';
-
     protected function getPackageProviders($app): array
     {
         return [
