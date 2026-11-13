@@ -16,15 +16,16 @@ class PhpScanner implements ScannerInterface
 
     public function scan(string $content): array
     {
+        $content = StringLiteralScanner::withoutComments($content);
         $keys = [];
 
         // Basic patterns for common Laravel translation functions
         $patterns = [
-            '/__\([\'"]([^\'"]+)[\'"]/',
-            '/trans\([\'"]([^\'"]+)[\'"]/',
-            '/Lang::get\([\'"]([^\'"]+)[\'"]/',
-            '/trans_choice\([\'"]([^\'"]+)[\'"]/',
-            '/Lang::choice\([\'"]([^\'"]+)[\'"]/',
+            '/\b__\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/\btrans\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/\bLang\s*::\s*get\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/\btrans_choice\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/\bLang\s*::\s*choice\s*\(\s*[\'"]([^\'"]+)[\'"]/',
         ];
 
         foreach ($patterns as $pattern) {
@@ -33,6 +34,6 @@ class PhpScanner implements ScannerInterface
             }
         }
 
-        return array_unique($keys);
+        return array_values(array_unique($keys));
     }
 }

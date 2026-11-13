@@ -98,3 +98,21 @@ it('removes duplicates', function () {
 
     expect($keys)->toHaveCount(1);
 });
+
+it('finds multiline translation calls', function (string $helper) {
+    $content = "<?php {$helper}(\n    'messages.deeply.nested.label',\n);";
+
+    expect((new PhpScanner)->scan($content))->toContain('messages.deeply.nested.label');
+})->with(['__', 'trans', 'trans_choice', 'Lang::get', 'Lang::choice']);
+
+it('does not treat commented calls as usage', function () {
+    $content = <<<'PHP'
+    <?php
+    // __('messages.old');
+    /* trans('messages.removed'); */
+    # Lang::get('messages.disabled');
+    __('messages.used');
+    PHP;
+
+    expect((new PhpScanner)->scan($content))->toBe(['messages.used']);
+});

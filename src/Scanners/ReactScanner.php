@@ -17,14 +17,15 @@ class ReactScanner implements ScannerInterface
 
     public function scan(string $content): array
     {
+        $content = StringLiteralScanner::withoutComments($content);
         $keys = [];
 
         $patterns = [
-            '/\bt\(\s*[\'"]([^\'"]+)[\'"]/i',
-            '/i18n\.t\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/\bt\s*\(\s*[\'"]([^\'"]+)[\'"]/i',
+            '/i18n\.t\s*\(\s*[\'"]([^\'"]+)[\'"]/',
             '/<Trans[^>]+i18nKey=[\'"]([^\'"]+)[\'"]/',
             '/<FormattedMessage[^>]+id=[\'"]([^\'"]+)[\'"]/',
-            '/t\(\s*\`([^`]+)\`/',
+            '/\bt\s*\(\s*\`([^`]+)\`/',
         ];
 
         foreach ($patterns as $pattern) {

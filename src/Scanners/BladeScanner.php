@@ -15,19 +15,20 @@ class BladeScanner implements ScannerInterface
 
     public function scan(string $content): array
     {
+        $content = StringLiteralScanner::withoutComments($content);
         $keys = [];
 
         // Blade translation patterns
         $patterns = [
-            '/@lang\([\'"]([^\'"]+)[\'"]\)/',
-            '/@choice\([\'"]([^\'"]+)[\'"]/',
-            '/\{\{\s*__\([\'"]([^\'"]+)[\'"]/',
-            '/\{\{\s*trans\([\'"]([^\'"]+)[\'"]/',
-            '/__\([\'"]([^\'"]+)[\'"]\)/',
-            '/trans\([\'"]([^\'"]+)[\'"]/',
-            '/trans_choice\([\'"]([^\'"]+)[\'"]/',
-            '/Lang::get\([\'"]([^\'"]+)[\'"]/',
-            '/Lang::choice\([\'"]([^\'"]+)[\'"]/',
+            '/@lang\s*\(\s*[\'"]([^\'"]+)[\'"]\s*\)/',
+            '/@choice\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/\{\{\s*__\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/\{\{\s*trans\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/__\s*\(\s*[\'"]([^\'"]+)[\'"]\s*\)/',
+            '/trans\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/trans_choice\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/Lang\s*::\s*get\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/Lang\s*::\s*choice\s*\(\s*[\'"]([^\'"]+)[\'"]/',
         ];
 
         foreach ($patterns as $pattern) {
@@ -36,6 +37,6 @@ class BladeScanner implements ScannerInterface
             }
         }
 
-        return array_unique($keys);
+        return array_values(array_unique($keys));
     }
 }

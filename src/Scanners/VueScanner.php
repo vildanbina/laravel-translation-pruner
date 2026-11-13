@@ -17,15 +17,16 @@ class VueScanner implements ScannerInterface
 
     public function scan(string $content): array
     {
+        $content = StringLiteralScanner::withoutComments($content);
         $keys = [];
 
         // Vue/JS translation patterns
         $patterns = [
-            '/trans\([\'"]([^\'"]+)[\'"]/',
-            '/\$t\([\'"]([^\'"]+)[\'"]/',
-            '/i18n\.t\([\'"]([^\'"]+)[\'"]/',
+            '/trans\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/\$t\s*\(\s*[\'"]([^\'"]+)[\'"]/',
+            '/i18n\.t\s*\(\s*[\'"]([^\'"]+)[\'"]/',
             '/v-t=[\'"]([^\'"]+)[\'"]/',
-            '/\.t\([\'"]([^\'"]+)[\'"]/',
+            '/\.t\s*\(\s*[\'"]([^\'"]+)[\'"]/',
         ];
 
         foreach ($patterns as $pattern) {
@@ -34,6 +35,6 @@ class VueScanner implements ScannerInterface
             }
         }
 
-        return array_unique($keys);
+        return array_values(array_unique($keys));
     }
 }

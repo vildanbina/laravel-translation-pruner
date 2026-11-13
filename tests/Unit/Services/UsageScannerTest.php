@@ -165,9 +165,10 @@ it('skips files when no scanner can handle them', function () {
     expect($usageScanner->scan([$this->tempDir]))->toBe([]);
 });
 
-it('ignores filesystem exceptions thrown by the finder', function () {
+it('stops when the finder cannot complete the scan', function () {
     /** @var VildanBina\TranslationPruner\Tests\TestCase $this */
     $usageScanner = new ExceptionThrowingUsageScanner(config: $this->config);
 
-    expect($usageScanner->scan([$this->tempDir]))->toBe([]);
+    expect(fn () => $usageScanner->scan([$this->tempDir]))
+        ->toThrow(RuntimeException::class, 'Translation scan was incomplete');
 });

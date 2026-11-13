@@ -6,11 +6,13 @@ namespace VildanBina\TranslationPruner\Services;
 
 use Exception;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use RuntimeException;
 use Symfony\Component\Finder\Finder;
 use VildanBina\TranslationPruner\Contracts\ScannerInterface;
 use VildanBina\TranslationPruner\Scanners\BladeScanner;
 use VildanBina\TranslationPruner\Scanners\PhpScanner;
 use VildanBina\TranslationPruner\Scanners\ReactScanner;
+use VildanBina\TranslationPruner\Scanners\StringLiteralScanner;
 use VildanBina\TranslationPruner\Scanners\VueScanner;
 
 class UsageScanner
@@ -29,6 +31,11 @@ class UsageScanner
      * @var array<int, string>
      */
     private array $filePatterns = [];
+
+    /**
+     * @var array<string, true>
+     */
+    private array $directReferences = [];
 
     public function __construct(ConfigRepository $config)
     {
@@ -52,6 +59,7 @@ class UsageScanner
      */
     public function scan(array $paths): array
     {
+        $this->directReferences = [];
         $paths = $this->filterPaths($paths);
 
         if (empty($paths)) {
@@ -63,8 +71,7 @@ class UsageScanner
         try {
             $finder = $this->makeFinder()
                 ->files()
-                ->in($paths)
-                ->ignoreUnreadableDirs();
+                ->in($paths);
 
             foreach ($this->filePatterns as $pattern) {
                 $finder->name($pattern);
@@ -86,14 +93,26 @@ class UsageScanner
                 foreach ($scanners as $scanner) {
                     foreach ($scanner->scan($contents) as $key) {
                         $keys[$key] = true;
+
+                        if (! $scanner instanceof StringLiteralScanner) {
+                            $this->directReferences[$key] = true;
+                        }
                     }
                 }
             }
         } catch (Exception $e) {
-            // Silently ignore filesystem issues to keep command output clean.
+            throw new RuntimeException('Translation scan was incomplete; pruning has been stopped.', 0, $e);
         }
 
-        return array_keys($keys);
+        return array_map('strval', array_keys($keys));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function directReferences(): array
+    {
+        return array_map('strval', array_keys($this->directReferences));
     }
 
     protected function makeFinder(): Finder
@@ -150,6 +169,7 @@ class UsageScanner
             new BladeScanner,
             new VueScanner,
             new ReactScanner,
+            new StringLiteralScanner,
         ];
     }
 
