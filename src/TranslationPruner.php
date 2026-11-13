@@ -60,7 +60,7 @@ class TranslationPruner
         $availableKeys = $this->repository->all();
         $resolvedPaths = $this->resolvePaths($paths);
         $usedKeys = $this->usageScanner->scan($resolvedPaths);
-        $usedLookup = array_fill_keys($usedKeys, true);
+        $usedLookup = $this->resolveUsedKeys(array_map('strval', array_keys($availableKeys)), $usedKeys, $this->usageScanner->directReferences());
 
         $unused = $this->applyExclusions(array_diff_key($availableKeys, $usedLookup));
         $usedCount = count(array_intersect_key($usedLookup, $availableKeys));
@@ -94,7 +94,7 @@ class TranslationPruner
 
                 $targetKey = is_string($info['key_path'] ?? null)
                     ? $info['key_path']
-                    : $key;
+                    : (string) $key;
 
                 $group = $info['group'] ?? null;
                 $group = is_string($group) && $group !== '' ? $group : null;
@@ -229,6 +229,63 @@ class TranslationPruner
         $regex = '/^'.str_replace('\*', '.*', preg_quote($pattern, '/')).'$/';
 
         return (bool) preg_match($regex, $key);
+    }
+
+    /**
+     * @param  list<string>  $availableKeys
+     * @param  list<string>  $references
+     * @param  list<string>  $directReferences
+     * @return array<string, true>
+     */
+    private function resolveUsedKeys(array $availableKeys, array $references, array $directReferences): array
+    {
+        $exact = array_fill_keys($references, true);
+        $direct = array_fill_keys($directReferences, true);
+        $patterns = [];
+
+        foreach ($references as $reference) {
+            $pattern = preg_replace('/\$\{[^{}]*\}|\{\$[^{}]*\}|\$[a-zA-Z_]\w*(?:->\w+)*/', '*', $reference) ?? $reference;
+
+            if (isset($direct[$reference]) && str_ends_with($pattern, '.')) {
+                $pattern .= '*';
+            }
+
+            // Literal asterisks in SQL, imports, or permissions are not translation patterns.
+            if ($pattern !== $reference && preg_match('/^[\w:\/-]+\.[\w.*:\/-]+$/', $pattern) === 1) {
+                $patterns[$pattern] = true;
+            }
+        }
+        $used = [];
+
+        foreach ($availableKeys as $key) {
+            if (isset($exact[$key])) {
+                $used[$key] = true;
+
+                continue;
+            }
+
+            $parent = $key;
+
+            while (($separator = mb_strrpos($parent, '.')) !== false) {
+                $parent = mb_substr($parent, 0, $separator);
+
+                if (isset($direct[$parent])) {
+                    $used[$key] = true;
+
+                    continue 2;
+                }
+            }
+
+            foreach (array_keys($patterns) as $pattern) {
+                if ($this->matchesPattern($key, $pattern)) {
+                    $used[$key] = true;
+
+                    break;
+                }
+            }
+        }
+
+        return $used;
     }
 
     /**

@@ -7,6 +7,7 @@ use VildanBina\TranslationPruner\Loaders\PhpArrayLoader;
 use VildanBina\TranslationPruner\Scanners\BladeScanner;
 use VildanBina\TranslationPruner\Scanners\PhpScanner;
 use VildanBina\TranslationPruner\Scanners\ReactScanner;
+use VildanBina\TranslationPruner\Scanners\StringLiteralScanner;
 use VildanBina\TranslationPruner\Scanners\VueScanner;
 
 return [
@@ -22,8 +23,8 @@ return [
     */
     'paths' => [
         base_path('app'),
-        base_path('resources/views'),
-        base_path('resources/js'),
+        base_path('resources'),
+        base_path('routes'),
     ],
 
     /*
@@ -59,6 +60,7 @@ return [
         'vendor',
         'node_modules',
         'storage',
+        'cache',
         'bootstrap/cache',
     ],
 
@@ -104,6 +106,7 @@ return [
         BladeScanner::class,
         VueScanner::class,
         ReactScanner::class,
+        StringLiteralScanner::class,
     ],
 
     /*

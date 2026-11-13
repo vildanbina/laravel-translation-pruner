@@ -54,3 +54,25 @@ it('detects template literal translations', function () {
 
     expect($scanner->scan($content))->toContain('messages.template');
 });
+
+it('ignores commented translations and accepts whitespace before calls', function () {
+    $content = <<<'JS'
+    // t('messages.old');
+    /* <Trans i18nKey="messages.removed" /> */
+    t (
+        'messages.deeply.nested.label',
+    );
+    JS;
+
+    expect((new ReactScanner)->scan($content))->toBe(['messages.deeply.nested.label']);
+});
+
+it('does not confuse regex literals with comments or translation calls', function () {
+    $content = <<<'JS'
+    const slashes = /[//]/;
+    const quoted = /t('messages.unused')/;
+    const result = t('messages.used');
+    JS;
+
+    expect((new ReactScanner)->scan($content))->toBe(['messages.used']);
+});
